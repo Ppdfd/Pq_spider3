@@ -4,70 +4,70 @@
             "device": "IIoT-DEV-000",
             "fog_node": 0,
             "enclave": "E_0_3",
-            "node_score": -0.5126,
-            "enclave_score": 0.1236
+            "node_score": -0.505,
+            "enclave_score": 0.0537
         },
         {
             "device": "IIoT-DEV-001",
             "fog_node": 1,
             "enclave": "E_1_3",
-            "node_score": -0.4899,
-            "enclave_score": 0.1235
+            "node_score": -0.4823,
+            "enclave_score": 0.0536
         },
         {
             "device": "IIoT-DEV-002",
             "fog_node": 0,
             "enclave": "E_0_3",
-            "node_score": -0.4821,
+            "node_score": -0.4745,
             "enclave_score": -0.1906
         },
         {
             "device": "IIoT-DEV-003",
             "fog_node": 1,
             "enclave": "E_1_3",
-            "node_score": -0.4664,
+            "node_score": -0.4588,
             "enclave_score": -0.1909
         },
         {
             "device": "IIoT-DEV-004",
             "fog_node": 2,
-            "enclave": "E_2_0",
-            "node_score": -0.4638,
-            "enclave_score": 0.124
+            "enclave": "E_2_2",
+            "node_score": -0.4562,
+            "enclave_score": 0.0543
         },
         {
             "device": "IIoT-DEV-005",
             "fog_node": 2,
-            "enclave": "E_2_0",
-            "node_score": -0.437,
-            "enclave_score": -0.1897
+            "enclave": "E_2_2",
+            "node_score": -0.4293,
+            "enclave_score": -0.1892
         },
         {
             "device": "IIoT-DEV-006",
             "fog_node": 0,
             "enclave": "E_0_3",
-            "node_score": -0.4314,
+            "node_score": -0.4238,
             "enclave_score": -0.1848
         },
         {
             "device": "IIoT-DEV-007",
             "fog_node": 1,
             "enclave": "E_1_3",
-            "node_score": -0.4273,
+            "node_score": -0.4197,
             "enclave_score": -0.1853
         },
         {
             "device": "IIoT-DEV-008",
             "fog_node": 2,
-            "enclave": "E_2_0",
-            "node_score": -0.3922,
-            "enclave_score": -0.1833
+            "enclave": "E_2_2",
+            "node_score": -0.3846,
+            "enclave_score": -0.1825
         },
         {
             "device": "IIoT-DEV-009",
             "fog_node": 1,
             "enclave": "E_1_3",
-            "node_score": -0.3725,
+            "node_score": -0.3649,
             "enclave_score": -0.1796
         }
     ],
@@ -139,9 +139,9 @@
         {
             "fog_node_id": 2,
             "id": "E_2_0",
-            "queue_length": 3,
+            "queue_length": 0,
             "service_rate": 252,
-            "epc_availability": 7628800,
+            "epc_availability": 7733248,
             "epc_total": 7733248
         },
         {
@@ -155,9 +155,9 @@
         {
             "fog_node_id": 2,
             "id": "E_2_2",
-            "queue_length": 0,
+            "queue_length": 3,
             "service_rate": 240,
-            "epc_availability": 7733248,
+            "epc_availability": 7628800,
             "epc_total": 7733248
         },
         {
