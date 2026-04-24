@@ -3,72 +3,72 @@
         {
             "device": "IIoT-DEV-000",
             "fog_node": 0,
-            "enclave": "E_0_1",
-            "node_score": -0.5165,
-            "enclave_score": 0.0658
+            "enclave": "E_0_3",
+            "node_score": -0.5126,
+            "enclave_score": 0.1236
         },
         {
             "device": "IIoT-DEV-001",
             "fog_node": 1,
-            "enclave": "E_1_1",
-            "node_score": -0.4939,
-            "enclave_score": 0.064
+            "enclave": "E_1_3",
+            "node_score": -0.4899,
+            "enclave_score": 0.1235
         },
         {
             "device": "IIoT-DEV-002",
             "fog_node": 0,
-            "enclave": "E_0_1",
-            "node_score": -0.4861,
-            "enclave_score": -0.1849
+            "enclave": "E_0_3",
+            "node_score": -0.4821,
+            "enclave_score": -0.1906
         },
         {
             "device": "IIoT-DEV-003",
             "fog_node": 1,
-            "enclave": "E_1_1",
-            "node_score": -0.4704,
-            "enclave_score": -0.1895
+            "enclave": "E_1_3",
+            "node_score": -0.4664,
+            "enclave_score": -0.1909
         },
         {
             "device": "IIoT-DEV-004",
             "fog_node": 2,
-            "enclave": "E_2_1",
-            "node_score": -0.4677,
-            "enclave_score": 0.0641
+            "enclave": "E_2_0",
+            "node_score": -0.4638,
+            "enclave_score": 0.124
         },
         {
             "device": "IIoT-DEV-005",
             "fog_node": 2,
-            "enclave": "E_2_1",
-            "node_score": -0.4409,
-            "enclave_score": -0.1894
+            "enclave": "E_2_0",
+            "node_score": -0.437,
+            "enclave_score": -0.1897
         },
         {
             "device": "IIoT-DEV-006",
             "fog_node": 0,
-            "enclave": "E_0_1",
-            "node_score": -0.4353,
-            "enclave_score": -0.1756
+            "enclave": "E_0_3",
+            "node_score": -0.4314,
+            "enclave_score": -0.1848
         },
         {
             "device": "IIoT-DEV-007",
             "fog_node": 1,
-            "enclave": "E_1_1",
-            "node_score": -0.4312,
-            "enclave_score": -0.183
+            "enclave": "E_1_3",
+            "node_score": -0.4273,
+            "enclave_score": -0.1853
         },
         {
             "device": "IIoT-DEV-008",
             "fog_node": 2,
-            "enclave": "E_2_1",
-            "node_score": -0.3962,
-            "enclave_score": -0.1829
+            "enclave": "E_2_0",
+            "node_score": -0.3922,
+            "enclave_score": -0.1833
         },
         {
             "device": "IIoT-DEV-009",
             "fog_node": 1,
-            "enclave": "E_1_1",
-            "node_score": -0.3764,
-            "enclave_score": -0.1765
+            "enclave": "E_1_3",
+            "node_score": -0.3725,
+            "enclave_score": -0.1796
         }
     ],
     "post_state": [
@@ -83,9 +83,9 @@
         {
             "fog_node_id": 0,
             "id": "E_0_1",
-            "queue_length": 3,
+            "queue_length": 0,
             "service_rate": 172,
-            "epc_availability": 7628800,
+            "epc_availability": 7733248,
             "epc_total": 7733248
         },
         {
@@ -99,9 +99,9 @@
         {
             "fog_node_id": 0,
             "id": "E_0_3",
-            "queue_length": 0,
+            "queue_length": 3,
             "service_rate": 276,
-            "epc_availability": 7733248,
+            "epc_availability": 7628800,
             "epc_total": 7733248
         },
         {
@@ -115,9 +115,9 @@
         {
             "fog_node_id": 1,
             "id": "E_1_1",
-            "queue_length": 4,
+            "queue_length": 0,
             "service_rate": 247,
-            "epc_availability": 7593984,
+            "epc_availability": 7733248,
             "epc_total": 7733248
         },
         {
@@ -131,25 +131,25 @@
         {
             "fog_node_id": 1,
             "id": "E_1_3",
-            "queue_length": 0,
+            "queue_length": 4,
             "service_rate": 285,
-            "epc_availability": 7733248,
+            "epc_availability": 7593984,
             "epc_total": 7733248
         },
         {
             "fog_node_id": 2,
             "id": "E_2_0",
-            "queue_length": 0,
+            "queue_length": 3,
             "service_rate": 252,
-            "epc_availability": 7733248,
+            "epc_availability": 7628800,
             "epc_total": 7733248
         },
         {
             "fog_node_id": 2,
             "id": "E_2_1",
-            "queue_length": 3,
+            "queue_length": 0,
             "service_rate": 246,
-            "epc_availability": 7628800,
+            "epc_availability": 7733248,
             "epc_total": 7733248
         },
         {

@@ -99,6 +99,21 @@ class PlotConfig:
 PLOT = PlotConfig()
 MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
 
+SCHEME_STYLES = {
+    "Spider++ (Ours)": {"color": "#1A73E8", "marker": "o"},
+    "Spider++ Cache (Ours)": {"color": "#1A73E8", "marker": "o"},
+    "Ref[4]": {"color": "#E8710A", "marker": "s"},
+    "Ref[35]": {"color": "#34A853", "marker": "^"},
+    "Ref[36]": {"color": "#EA4335", "marker": "D"},
+    "Ref[22]": {"color": "#E8710A", "marker": "s"},
+    "Ref[37]": {"color": "#34A853", "marker": "^"},
+    "Ref[39]": {"color": "#EA4335", "marker": "D"},
+    "No Cache-Aware Scheduling": {"color": "#E8710A", "marker": "v"},
+    "Random Cache Placement": {"color": "#34A853", "marker": "s"},
+    "No Delegation": {"color": "#E8710A", "marker": "x"},
+    "Simple Retry / Reassignment": {"color": "#34A853", "marker": "v"},
+}
+
 
 def set_global_seed(seed: int = GLOBAL_SEED) -> np.random.Generator:
     """Seed Python and NumPy RNGs for reproducible simulations."""
@@ -201,8 +216,10 @@ def plot_lines(
 
     fig, ax = plt.subplots(figsize=PLOT.figsize)
     for idx, (label, (mean, std)) in enumerate(series.items()):
-        marker = MARKERS[idx % len(MARKERS)]
-        line = ax.plot(x, mean, marker=marker, label=label)[0]
+        style = SCHEME_STYLES.get(label, {"color": None, "marker": MARKERS[idx % len(MARKERS)]})
+        marker = style["marker"]
+        color = style["color"]
+        line = ax.plot(x, mean, marker=marker, color=color, label=label)[0]
         if std is not None:
             lower = np.maximum(mean - std, 0.0)
             upper = mean + std
@@ -378,7 +395,7 @@ def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
     modes = {
         "No Cache-Aware Scheduling": "no_cache",
         "Random Cache Placement": "random_cache",
-        "Spider++ Reuse-Aware Cache (Ours)": "spider_cache",
+        "Spider++ (Ours)": "spider_cache",
     }
 
     mean_series: Dict[str, np.ndarray] = {}
@@ -786,7 +803,7 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
         recovery = rng.normal(145, 10) + 2.45 * affected_tasks + 72 * failed ** 1.15 + rng.normal(24, 5)
     elif method == "Simple Retry / Reassignment":
         recovery = rng.normal(92, 8) + 42 + 9.5 * failed + 1.28 * affected_tasks + 38 * failed ** 1.05
-    elif method == "Spider++ Secure Task Delegation (Ours)":
+    elif method == "Spider++ (Ours)":
         recovery = rng.normal(48, 5) + 24 + 4.2 * failed + 0.54 * affected_tasks + 13 + 1.8 * failed
     else:
         raise ValueError(method)
@@ -801,7 +818,7 @@ def graph8_recovery(rng: np.random.Generator, reps: int = 5) -> Dict[str, np.nda
     methods = [
         "No Delegation",
         "Simple Retry / Reassignment",
-        "Spider++ Secure Task Delegation (Ours)",
+        "Spider++ (Ours)",
     ]
 
     mean_series: Dict[str, np.ndarray] = {}

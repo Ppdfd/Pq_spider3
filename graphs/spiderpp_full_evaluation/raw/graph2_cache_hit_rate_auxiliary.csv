@@ -1,4 +1,4 @@
-Number of Tasks,No Cache-Aware Scheduling,Random Cache Placement,Spider++ Reuse-Aware Cache (Ours)
+Number of Tasks,No Cache-Aware Scheduling,Random Cache Placement,Spider++ (Ours)
 100,0.0,0.31666666666666665,0.89
 200,0.0,0.36166666666666664,0.9266666666666667
 300,0.0,0.3655555555555556,0.9244444444444445
