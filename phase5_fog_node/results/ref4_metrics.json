@@ -1,0 +1,8 @@
+{
+    "poly1305_verify": 3.179300001647789,
+    "beta_augmentation": 8.41489999947953,
+    "dilithium_sign": 58.09690000023693,
+    "total_fog_latency": 91.67270000034478,
+    "dilithium_verify": 11.67640000130632,
+    "flex_stripping": 9.927600000082748
+}

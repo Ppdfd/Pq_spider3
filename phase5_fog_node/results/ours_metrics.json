@@ -1,0 +1,9 @@
+{
+    "batch_verify": 0.026199999410891905,
+    "enclave_decrypt": 39.31129999909899,
+    "aes_reencrypt": 0.07789999654050916,
+    "tee_partial_cpabe": 135.73340000220924,
+    "ree_policy_expand": 0.19459999748505652,
+    "dilithium_sign": 59.98330000147689,
+    "total_fog_latency": 235.51649999717483
+}
