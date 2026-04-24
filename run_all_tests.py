@@ -282,35 +282,6 @@ def main():
         print("# GENERATING GRAPHS")
         print("#" * 70 + "\n")
 
-        with contextlib.redirect_stdout(io.StringIO()):
-            run_phase1_simulation()
-            run_phase2_simulation()
-            run_phase3_simulation()
-
-        phase1_main.plot_graphs() if hasattr(phase1_main, 'plot_graphs') else None
-        phase2_main.plot_graphs() if hasattr(phase2_main, 'plot_graphs') else None
-        phase3_main.plot_graphs() if hasattr(phase3_main, 'plot_graphs') else None
-        phase4_main.plot_graphs() if hasattr(phase4_main, 'plot_graphs') else None
-
-        # Restore after Phase 4 graphs
-        with contextlib.redirect_stdout(io.StringIO()):
-            run_phase1_simulation()
-            run_phase2_simulation()
-            run_phase3_simulation()
-            run_phase4_simulation()
-
-        phase5_main.plot_graphs() if hasattr(phase5_main, 'plot_graphs') else None
-
-        # Restore after Phase 5 graphs
-        with contextlib.redirect_stdout(io.StringIO()):
-            run_phase1_simulation()
-            run_phase2_simulation()
-            run_phase3_simulation()
-            run_phase4_simulation()
-            run_phase5_simulation()
-
-        phase6_main.plot_graphs() if hasattr(phase6_main, 'plot_graphs') else None
-
         # Generate the complete paper-style Spider++ evaluation graph set:
         # Graph 1, 2, 3, 4, 5, 6, and 8. Graph 7 is intentionally skipped.
         if getattr(config, "GENERATE_SPIDERPP_FULL_EVALUATION", True):

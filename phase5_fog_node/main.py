@@ -113,7 +113,7 @@ def plot_graphs():
         xlabel='Number of Fog Nodes',
         ylabel='Fog Latency (ms)',
         title='Phase 5: Fog Latency vs Network Scale',
-        output_path=results_dir / "phase5_fog_latency.pdf",
+        output_path=results_dir / "phase5_fog_latency.png",
         caption="Architectural note: Ours performs Kyber decap + AES-GCM + CP-ABE "
                 "partial + Dilithium sign.\nRef [35] does Kyber relay + Dilithium "
                 "sign.  Ref [4] does Poly1305 verify + beta augmentation +\nDilithium "
@@ -147,7 +147,7 @@ def plot_graphs():
         xlabel='Number of Attributes',
         ylabel='Fog Latency (ms)',
         title='Phase 5: Fog Latency vs Attribute Density',
-        output_path=results_dir / "phase5_attr_latency.pdf",
+        output_path=results_dir / "phase5_attr_latency.png",
         caption="Refs [35] and [36] omitted: neither uses attribute-based "
                 "access control.\nOurs and Ref [4] both use ring dimension n=256.",
     )

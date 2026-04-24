@@ -33,7 +33,6 @@ or directly:
 
 Outputs:
     graphs/spiderpp_full_evaluation/*.png
-    graphs/spiderpp_full_evaluation/*.pdf
     graphs/spiderpp_full_evaluation/raw/*.csv
 """
 
@@ -217,7 +216,6 @@ def plot_lines(
     ax.legend(frameon=True, loc="best")
     fig.tight_layout()
     fig.savefig(OUT_DIR / f"{filename}.png")
-    fig.savefig(OUT_DIR / f"{filename}.pdf")
     plt.close(fig)
 
 

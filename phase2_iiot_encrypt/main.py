@@ -135,7 +135,7 @@ def plot_graphs():
         xlabel='Number of Attributes',
         ylabel='Device-Side Latency (ms)',
         title='Phase 2: Device Latency vs Number of Attributes',
-        output_path=results_dir / "phase2_attr_latency.pdf",
+        output_path=results_dir / "phase2_attr_latency.png",
         # AUDIT FIX: disclose architectural asymmetry
         caption="Architectural note: Ours' Phase 2 performs no per-attribute\n"
                 "operations at the device (attribute work is deferred to Phase 5).\n"
@@ -164,7 +164,7 @@ def plot_graphs():
         list(bar_results.keys()), list(bar_results.values()),
         ylabel='Single Device Encryption Latency (ms)',
         title='Phase 2: Single IIoT Encryption Latency Comparison',
-        output_path=results_dir / "phase2_latency_bar.pdf",
+        output_path=results_dir / "phase2_latency_bar.png",
     )
     print("  Phase 2 graphs complete.\n")
 

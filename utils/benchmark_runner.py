@@ -141,7 +141,7 @@ def plot_ieee_line(x_values, data_dict, xlabel, ylabel, title, output_path,
         plt.tight_layout()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, format='pdf', dpi=300)
+    plt.savefig(output_path, format='png', dpi=300)
     plt.close()
     print(f"  -> Graph saved: {output_path}")
 
@@ -160,7 +160,7 @@ def plot_ieee_bar(names, values, ylabel, title, output_path,
     ylabel, title : str
         Axis label and chart title.
     output_path : Path
-        Where to save the PDF.
+        Where to save the PNG.
     """
     plt.figure(figsize=(8, 6))
 
@@ -186,6 +186,6 @@ def plot_ieee_bar(names, values, ylabel, title, output_path,
     plt.tight_layout()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, format='pdf', dpi=300)
+    plt.savefig(output_path, format='png', dpi=300)
     plt.close()
     print(f"  -> Graph saved: {output_path}")

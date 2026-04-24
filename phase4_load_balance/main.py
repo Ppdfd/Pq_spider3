@@ -318,7 +318,7 @@ def plot_graphs():
         xlabel='Number of Tasks',
         ylabel='Avg End-to-End Latency (ms/task)',
         title='Phase 4: Latency Comparison',
-        output_path=results_dir / "phase4_latency.pdf",
+        output_path=results_dir / "phase4_latency.png",
     )
 
     # ── Graph 2: Execution Time ──
@@ -328,7 +328,7 @@ def plot_graphs():
         xlabel='Number of Tasks',
         ylabel='Scheduler Execution Time (ms)',
         title='Phase 4: Execution Time',
-        output_path=results_dir / "phase4_execution_time.pdf",
+        output_path=results_dir / "phase4_execution_time.png",
     )
 
     # ── Graph 3: Energy Consumption ──
@@ -338,7 +338,7 @@ def plot_graphs():
         xlabel='Number of Tasks',
         ylabel='Avg Energy Consumption (mJ/task)',
         title='Phase 4: Energy Consumption',
-        output_path=results_dir / "phase4_energy.pdf",
+        output_path=results_dir / "phase4_energy.png",
     )
 
     # ── Graph 4: Network Usage ──
@@ -348,7 +348,7 @@ def plot_graphs():
         xlabel='Number of Tasks',
         ylabel='Total Network Usage (KB)',
         title='Phase 4: Network Usage',
-        output_path=results_dir / "phase4_network.pdf",
+        output_path=results_dir / "phase4_network.png",
     )
 
     print("  Phase 4 graphs complete.\n")

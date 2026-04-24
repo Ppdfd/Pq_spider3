@@ -68,7 +68,7 @@ def plot_graphs():
         xlabel='Number of Batch Tasks (Device Density)',
         ylabel='Total Gateway Proxy Latency (ms)',
         title='Phase 3: Proxy Scale Latency vs Density Loads',
-        output_path=results_dir / "phase3_task_latency.pdf",
+        output_path=results_dir / "phase3_task_latency.png",
     )
     print("  Phase 3 graphs complete.\n")
 

@@ -124,7 +124,7 @@ def plot_graphs():
         xlabel='Number of Attributes',
         ylabel='User Decryption Latency (ms)',
         title='Phase 6: User Decryption vs Attribute Depth',
-        output_path=results_dir / "phase6_attr_latency.pdf",
+        output_path=results_dir / "phase6_attr_latency.png",
         caption="Structural note: Ours does ONE batch-level decrypt (fog-side "
                 "aggregation in Phase 5).\nRefs do per-packet decrypt × N packets.  "
                 "The attribute axis only applies to Ours and Ref [4];\nit is shown "

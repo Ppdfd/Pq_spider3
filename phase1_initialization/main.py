@@ -128,7 +128,7 @@ def plot_graphs():
         xlabel='Number of Attributes in Universe',
         ylabel='CP-ABE Setup Latency (ms)',
         title='Phase 1: CP-ABE Latency vs Number of Attributes',
-        output_path=results_dir / "phase1_attr_latency.pdf",
+        output_path=results_dir / "phase1_attr_latency.png",
         # AUDIT FIX: disclose why [35]/[36] are absent
         caption="Refs [35] and [36] omitted: neither defines attribute-based "
                 "access control.\nOurs and Ref [4] both use ring dimension n=256.",
@@ -162,7 +162,7 @@ def plot_graphs():
         xlabel='Number of Fog Nodes',
         ylabel='Initialization Latency (ms)',
         title='Phase 1: Latency vs Number of Fog Nodes',
-        output_path=results_dir / "phase1_fog_latency.pdf",
+        output_path=results_dir / "phase1_fog_latency.png",
     )
     print("  Phase 1 graphs complete.\n")
 
