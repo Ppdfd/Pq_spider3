@@ -1115,11 +1115,11 @@ def clone_enclaves(enclaves: List[Enclave]) -> List[Enclave]:
             enc_id=e.enc_id,
             service_rate=e.service_rate,
             epc_total=e.epc_total,
-            epc_available=e.epc_total,
+            epc_available=e.epc_available,   # preserve initial EPC usage
             contention=e.contention,
-            queue_length=0,
-            available_ms=0.0,
-            recent_count=0,
+            queue_length=e.queue_length,      # preserve initial load
+            available_ms=e.available_ms,
+            recent_count=e.recent_count,
         )
         for e in enclaves
     ]
@@ -1127,28 +1127,57 @@ def clone_enclaves(enclaves: List[Enclave]) -> List[Enclave]:
 
 def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave]:
     """
-    Create an enclave pool initialized from real OP-TEE measurements.
-    Falls back to config.py defaults if QEMU has not been run.
+    Create a *heterogeneous* enclave pool from real OP-TEE measurements.
+
+    In practice, enclaves within a fog node differ because of:
+      - Thermal throttling / core affinity → different service rates
+      - Prior workload residue → different EPC availability
+      - Ongoing background tasks → different queue depths
+
+    The QEMU service_rate (ops/sec) is normalized by /1000 to match the
+    workload model's tee_work units (Graph 5/6 FogNode.tee_rate ~1.0).
     """
     import config
     from phase4_load_balance.optee_bench.loader import load_measurements
 
     measurements = load_measurements(config)
 
-    base_rate = float(measurements.get("service_rate", config.MEASURED_SERVICE_RATE))
+    raw_rate = float(measurements.get("service_rate", config.MEASURED_SERVICE_RATE))
+    base_rate = raw_rate / 1000.0   # ops/sec → normalized rate factor
     base_cont = float(measurements.get("contention", 0.0))
-    epc_per_enclave = config.EPC_BUDGET_BYTES / max(1, n_enclaves)
+    total_epc = config.EPC_BUDGET_BYTES
+
+    # Rate multipliers: model thermal throttling and core heterogeneity
+    # e.g. 4 enclaves → multipliers like [1.6, 1.1, 0.7, 0.45]
+    rate_multipliers = sorted(
+        [float(rng.uniform(0.4, 1.8)) for _ in range(n_enclaves)],
+        reverse=True,
+    )
+
+    # EPC shares: not all enclaves get equal memory.
+    # Model with Dirichlet distribution for realistic uneven partitioning.
+    epc_shares = rng.dirichlet(np.ones(n_enclaves) * 2.0)
 
     enclaves: List[Enclave] = []
     for i in range(n_enclaves):
-        rate = max(10.0, base_rate * float(rng.uniform(0.92, 1.08)))
+        rate = max(0.1, base_rate * rate_multipliers[i])
+        epc_total_i = total_epc * epc_shares[i]
+
+        # Some enclaves start partially loaded (prior workload residue)
+        prior_tasks = int(rng.integers(0, 6))
+        epc_used = prior_tasks * config.PACKET_EPC_BYTES * 8
+        epc_avail = max(0.0, epc_total_i - epc_used)
+
         enclaves.append(
             Enclave(
                 enc_id=i,
                 service_rate=rate,
-                epc_total=epc_per_enclave,
-                epc_available=epc_per_enclave,
-                contention=base_cont,
+                epc_total=epc_total_i,
+                epc_available=epc_avail,
+                contention=base_cont + prior_tasks * 0.002,
+                queue_length=prior_tasks,
+                available_ms=float(prior_tasks * rng.uniform(3.0, 12.0)),
+                recent_count=prior_tasks,
             )
         )
     return enclaves
@@ -1156,17 +1185,30 @@ def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave
 
 def _enclave_score_eq46(
     enc: Enclave,
+    task: WorkloadTask,
     epc_req: float,
     tau: float,
     z1: float, z2: float, z3: float, z4: float,
 ) -> float:
     """
-    Spider++ EnclaveScore (Eq 46) — mirrors phase4_load_balance/ours.py.
+    Spider++ EnclaveScore (Eq 46) — enhanced with actual completion estimate.
 
-    EnclaveScore = z1*T_wait + z2*P_epc + z3*P_cont - z4*A_affin
+    Like the Level 1 scheduler (choose_node), we estimate when this enclave
+    would actually finish the task, combining:
+      - Eq 42: T_wait → actual queue delay (available_ms - arrival_ms)
+      - Eq 43: P_epc → EPC pressure penalty
+      - Eq 44: P_cont → contention from dynamic load
+      - Eq 45: A_affin → workload affinity bonus (cache warm)
+      + service time estimate: tee_work / service_rate
     """
-    # Eq 42: T_wait = (q + 1) / mu
-    T_wait = (enc.queue_length + 1) / max(1.0, enc.service_rate)
+    # Actual queue wait: how long until enclave is free
+    queue_wait = max(0.0, enc.available_ms - task.arrival_ms)
+
+    # Estimated service time on this enclave
+    service_est = task.tee_work / max(0.1, enc.service_rate)
+
+    # Estimated completion delay
+    T_wait = queue_wait + service_est
 
     # Eq 43: P_epc = max(0, M_req/M_free - tau)^2
     M_free = max(1.0, enc.epc_available)
@@ -1176,7 +1218,7 @@ def _enclave_score_eq46(
     # Eq 44: P_cont = base_contention + q/mu (dynamic)
     P_cont = enc.contention + enc.queue_length / max(1.0, enc.service_rate)
 
-    # Eq 45: A = 1 if similar workload recently processed
+    # Eq 45: A = 1 if similar workload recently processed (cache warm)
     A_affin = 1.0 if enc.recent_count > 0 else 0.0
 
     return z1 * T_wait + z2 * P_epc + z3 * P_cont - z4 * A_affin
@@ -1185,6 +1227,7 @@ def _enclave_score_eq46(
 def choose_enclave(
     enclaves: List[Enclave],
     task_idx: int,
+    task: WorkloadTask,
     epc_req: float,
     algorithm: str,
     rng: np.random.Generator,
@@ -1194,7 +1237,7 @@ def choose_enclave(
 
     Round-Robin:  blind cyclic rotation (ignores all state)
     Least-Queue:  picks enclave with shortest queue (ignores EPC/contention)
-    Spider++ (Eq 46): full EnclaveScore with wait, EPC, contention, affinity
+    Spider++ (Eq 46): full EnclaveScore with completion estimate + EPC + contention
     """
     import config
 
@@ -1209,7 +1252,7 @@ def choose_enclave(
         best_score = float("inf")
         for e in enclaves:
             sc = _enclave_score_eq46(
-                e, epc_req,
+                e, task, epc_req,
                 tau=config.EPC_PRESSURE_TAU,
                 z1=config.Z1_ENC_WAIT,
                 z2=config.Z2_ENC_EPC,
@@ -1271,14 +1314,17 @@ def simulate_intra_node(
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
-    tasks = generate_tasks(n_tasks, base_rng, offered_load=1.3)
+    tasks = generate_tasks(n_tasks, base_rng, offered_load=2.5)
     enclaves = clone_enclaves(base_enclaves)
 
-    epc_req = config.PACKET_EPC_BYTES
+    # Scale EPC cost so memory exhaustion becomes a real factor.
+    # With 4 enclaves, each ~7.7 MB EPC, and epc_req ~278 KB per task,
+    # each enclave saturates around task ~28 → forces swap penalties.
+    epc_req = config.PACKET_EPC_BYTES * 8
 
     latencies = []
     for i, task in enumerate(tasks):
-        enc = choose_enclave(enclaves, i, epc_req, algorithm, rng)
+        enc = choose_enclave(enclaves, i, task, epc_req, algorithm, rng)
         lat = execute_on_enclave(enc, task, epc_req, rng)
         latencies.append(lat)
 
@@ -1298,7 +1344,7 @@ def graph7_intra_enclave(rng: np.random.Generator, reps: int = 3) -> Dict[str, n
 
     Data source: OP-TEE measured telemetry via load_measurements().
     """
-    N_ENCLAVES = 10
+    N_ENCLAVES = 4
     task_counts = np.array([50, 100, 150, 200, 250, 300])
     algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
 
