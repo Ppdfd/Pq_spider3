@@ -1,0 +1,519 @@
+========== PHASE 1 ==========
+Phase I: System Initialization:The Attribute Authority
+(AA) initializes the lattice-based CP-ABE system by gener-
+ating public parameters and master secret keys. To preserve
+semantic privacy against untrusted host environments, the AA
+defines a universe of attributesΩand a collision-resistant
+hash functionH:{0,1} ∗ →Z q. For each semantic attribute
+attrj ∈Ω, the AA computes a deterministic identifier:
+ID j =H(attr j)(1)
+The AA executes lattice trapdoor generation to produce the
+Master Public Key (M P K) and Master Secret Key (M SK),
+binding public parameter matrices to the hashed identifiers:
+(M P K, M SK)←Setup(1 λ,{ID j}n
+j=1)(2)
+To eliminate repeated policy expansion overhead, the access
+structure is precomputed during system initialization. Specifi-
+cally, the policy treeT IDis transformed into its Linear Secret
+Sharing Scheme (LSSS) representation and cached for reuse.
+(M, ρID)←PolicyTreeGen(T ID)(3)
+Cpolicy(T ID) = (M, ρ ID)(4)
+Authorized users are issued attribute-linked secret keys:
+SKu ←KeyGen(M SK,{ID j}j∈Attru)(5)
+Gateway Initialization.The gateway generate a
+CRYSTALS-Kyber key pair as follow:
+(pkGW , skGW )←KeyGen Kyber (1λ)(6)
+wherepk GW denotes the public key,sk GW denotes the
+corresponding secret key,1 λ represents the security parameter
+of lengthλ, andKeyGen Kyber is the key generation algorithm
+of the CRYSTALS-Kyber scheme.
+The IIoT device derive a secret key and cipherkey using
+post-quantum key encapsulation every:
+(cgkem,i, kgkem,i)←Encap Kyber (pkGW )(7)
+Fog Node Initialization.Each fog node initializes its
+post-quantum communication capability by generating a
+CRYSTALS-Kyber key pair:
+(pkF N, skF N)←KeyGen Kyber (1λ)(8)
+The public keypk F N is distributed to registered IIoT devices
+for secure key establishment.
+Kyber Precomputation.To accelerate lattice-based opera-
+tions, each fog node precomputes the expanded public matrix
+and its Number Theoretic Transform (NTT) representation.
+This enables efficient polynomial operations during encapsu-
+lation and decapsulation.
+A←ExpandA(seed F N)(9)
+ˆA=NTT(A)(10)
+CKyber (Fj) = ˆA(11)
+To support hierarchical scheduling in Spider++, each fog node
+instantiates a set of enclaves:
+Fj ={E j,k |k= 1, . . . , m j}(12)
+and initializes local telemetry monitors to track enclave-level
+states, including queue length, service rate, and EPC availabil-
+ity. These metrics are periodically reported to the Master Fog
+Node (MFN) to enable global scheduling decisions.
+Policy Preparation.IIoT devices (or associated gateways)
+pre-compute hashed attribute identifiers and construct the
+access policy treeT ID using{ID j}, ensuring that no semantic
+attribute information is exposed during encryption and evalu-
+ation.
+
+
+========== PHASE 2 ==========
+Phase II: Hardware-Bound IIoT Encryption:When de-
+viceID i senses datam i, it first derives a hardware-bound
+secret using a Physical Unclonable Function (PUF). A noisy
+response is obtained and reconstructed into a stable secret via
+a fuzzy extractor:
+Rnoisy,i ←f P U F(Ci)(13)
+Rsecret,i ←FuzzyRep(R noisy,i, HDi)(14)
+The device then performs post-quantum key encapsulation
+to the fog node public key:
+(ckem,i, kkem,i)←Encap Kyber (pkF N)(15)
+A device-bound session key is derived as:
+KS,i =KDF(H(k kem,i)∥R secret,i ∥ID i ∥t i ∥ctr i)(16)
+The associated authenticated data (AAD) is constructed as:
+AADi =ID i ∥t i ∥ctr i (17)
+The sensed data is encrypted using ChaCha20-Poly1305:
+(CT i, T agi)←ChaCha20-Poly1305.Enc(K S,i, Ni, mi, AADi)
+(18)
+To enable gateway-side packet authentication and early
+filtering, the device computes a message authentication code
+usingkg kem,i:
+Authi ←MAC kgkem,i(ID i ∥M etadata∥c kem,i ∥CT i ∥T ag i ∥t i)
+(19)
+Finally, the device transmits the packet to the gateway:
+Pi ={ID i, M etadata, ckem,i, cgkem,i, CTi, Ni, AADi, T agi, Authi}
+(20)
+
+
+========== PHASE 3 ==========
+Phase III: Gateway Validation and Micro-Batch Forma-
+tion:Upon receiving packets from IIoT devices, the gateway
+performs authentication and integrity verification to filter out
+invalid or malicious inputs before forwarding data to the fog
+layer.
+For each received packetP i, the gateway recomputes the
+message authentication code using the derived kyber key:
+kgkem,i ←Decap Kyber (cgkem,i)(21)
+Auth′
+i ←MAC kgkem,i(ID i ∥M etadata∥c kem,i ∥CT i ∥T ag i ∥t i)
+(22)
+The packet is accepted only ifAuth ′
+i =Auth i. Otherwise,
+it is discarded. This ensures that only packets originating from
+legitimate devices with valid session keys are admitted into the
+system.
+All validated packets collected within a fixed time window
+twindow are grouped into a micro-batch. LetP valid denote the
+set of validated packets. To ensure batch-level integrity and
+prevent tampering, the gateway computes a group authentica-
+tion tag:
+GT ag←H(Sort(Auth i |P i ∈ P valid)∥t G)(23)
+Algorithm 1Gateway Validation and Micro-Batch Formation
+Require:Incoming packet stream during epocht window
+Ensure:Validated micro-batchB k
+1:P valid ← ∅
+2:M ← ∅
+3:for allreceived packetsP i do
+4:Compute:
+5:kg kem,i ←Decap Kyber (cgkem,i)
+6:Auth ′
+i ←MAC kgkem,i
+ 
+ID i ∥M etadata∥c kem,i ∥
+CT i ∥T ag i ∥t i
+!
+7:ifAuth ′
+i =Auth i then
+8:P valid ← P valid ∪ {Pi}
+9:M ← M ∪ {Auth i}
+10:else
+11:DiscardP i
+12:end if
+13:end for
+14:ifP valid =∅then
+15:return∅
+16:end if
+17:t G ←GatewayTimestamp()
+18:Compute: [GT ag←H(Sort(M)∥t G)]
+19:B k ←BID,P valid, GT ag, tG
+20:returnB k
+whereSort(·)enforces deterministic ordering andt G is the
+gateway timestamp.
+The micro-batch is then constructed as:
+Bk =BID,P valid, GT ag, tG (24)
+The validated batchB k is forwarded to the Master Fog Node
+(MFN) for scheduling under Spider.
+Remark:Under the hierarchical scheduling model intro-
+duced in Phase IV , the batchB k may be processed as a whole
+or decomposed into sub-batchesB (1)
+k , . . . , B(r)
+k to enable
+enclave-parallel execution.
+The complete validation and micro-batch formation proce-
+dure is summarized in Algorithm 1.
+
+
+========== PHASE 4 ==========
+Phase IV: Spider Hierarchical Enclave-Oriented Load
+Balancing:This phase presentsSpider(Secure Priority-
+Aware Intelligent Dual-Level Enclave Routing), a hierar-
+chical scheduling framework that performssecurity-aware,
+capability-aware, andenclave-parallelworkload orchestration
+in the fog layer.
+Unlike conventional load balancing approaches that treat
+each fog node as a single execution unit, Spider++ explicitly
+models multiple TEEs (enclaves) within each fog node and
+performs two-level scheduling: (i)inter-node routingacross
+fog nodes, and (ii)intra-node enclave allocationwithin each
+fog node.
+This design enables fine-grained resource utilization, re-
+duces EPC contention, and supports parallel execution of
+cryptographic workloads.
+1) Hierarchical Resource Model:Each fog node is modeled
+as a set of enclaves:
+Fj =E j,k |k= 1, . . . , m j (25)
+Each enclave maintains an independent state:
+Ψ(Ej,k) =q j,k, µj,k, M f ree
+j,k , ρj,k (26)
+whereq j,k denotes the queue length,µ j,k is the service rate,
+M f ree ∗j, krepresents available EPC memory, andρ∗j, k
+captures runtime contention (e.g., cache or EPC pressure).
+2) Batch Profiling:Upon receiving a validated batchB k,
+the Master Fog Node (MFN) constructs a workload profile:
+Φ(Bk) =S k, ωk, ηk, δk (27)
+where:S k =|B k|is batch size,ω k is cryptographic
+workload intensity,η k is security urgency,δ k is deadline
+sensitivity.
+The workload intensity is estimated as:
+ωk =β 1Sk +β2 ·AttrCount(B k)+β 3 ·PolicyDepth(B k)(28)
+The urgency score is:
+ηk =γ 1 ·RiskScore(B k) +γ 2 ·AnomalyFlag(B k)(29)
+Deadline sensitivity is:
+δk = 1
+Dk −t now +ϵ (30)
+The enclave memory requirementM req
+k is derived fromω k
+via an offline-calibrated model.
+3) Fog Node State Model:Each fog node periodically
+reports:
+Ψ(Fj) =Q T EE
+j , QREE
+j , µT EE
+j , µREE
+j , Lj, Ej, Cj, Uj (31)
+whereQ T EE
+j , QREE
+j denote queue lengths,µ T EE
+j and
+µREE
+j denote service rates,L j is network latency,E j is
+normalized EPC availability,C j is capability score, andU j
+is trust-health score.
+Level 1: Inter-Node Scheduling:The MFN selects the
+optimal fog node for batchB k by computing and minimizing
+a Spider score.
+Waiting Time:
+Twait(Fj) = QT EE
+j + 1
+µT EE
+j
++ QREE
+j + 1
+µREE
+j
+(32)
+EPC Pressure:
+Pepc(Fj, Bk) =λ 1 max
+ 
+0, M req
+k
+EjM total
+j
+−τ
+!2
+(33)
+Capability Penalty:
+Pcap(Fj, Bk) =λ 2 max(0, ωk −C j)(34)
+Trust Penalty:
+Ptrust(Fj) =λ 3(1−U j)(35)
+Spider Score:
+SpiderScore(Fj, Bk) =w1Twait(Fj) +w 2Lj +w 3Pepc
++w 4Pcap +w 5Ptrust
+−w 6ηkUj −w 7δkµT EE
+j
+(36)
+To further improve efficiency, Spider++ incorporates com-
+putation reuse awareness into scheduling decisions. Fog nodes
+that already cache relevant policy structures or cryptographic
+components are prioritized, reducing redundant computation
+and improving latency and energy efficiency.
+Ipolicy(Fj, Bk) =
+(
+1,ifT ID k ∈ C policy(Fj)
+0,otherwise (37)
+Ikyber(Fj) =
+(
+1,ifC Kyber (Fj)exists
+0,otherwise (38)
+Rreuse(Fj, Bk) =θ 1Ipolicy(Fj, Bk) +θ 2Ikyber(Fj)(39)
+SpiderScore′(Fj, Bk) =SpiderScore(F j, Bk)−w8Rreuse(Fj, Bk)
+(40)
+The indicator functionsI policy andI kyber capture whether
+a fog node has cached the required policy structure or
+precomputed cryptographic components. The reuse score
+Rreuse quantifies the availability of reusable computation,
+enabling the scheduler to prioritize nodes with lower expected
+processing overhead.
+Node Selection:
+F ∗ = arg min
+Fj ∈Ff easible
+SpiderScore′(Fj, Bk)(41)
+Level 2: Intra-Node Enclave Scheduling:After selecting
+F ∗, Spider++ performs fine-grained enclave allocation.
+Enclave Waiting Time:
+Twait(Ej,k) = qj,k + 1
+µj,k
+(42)
+Enclave EPC Pressure:
+Pepc(Ej,k, Bk) =λ ′
+1 max
+ 
+0, M req
+k
+M f ree
+j,k
+−τ
+!2
+(43)
+Contention Penalty:
+Pcont(Ej,k) =λ ′
+2ρj,k (44)
+Affinity Score:
+A(Ej,k, Bk) =
+(
+1,if similar workload was processed previously
+0,otherwise
+(45)
+Enclave Score:
+EnclaveScore(Ej,k, Bk) =z 1 Twait(Ej,k)
++z 2 Pepc(Ej,k, Bk)
++z 3 Pcont(Ej,k)
+−z 4 A(Ej,k, Bk)
+(46)
+Enclave Selection:
+E∗ = arg min
+Ej,k∈F ∗
+EnclaveScore(Ej,k, Bk)(47)
+4) Parallel Batch Decomposition:To exploit enclave-level
+parallelism and reduce end-to-end processing delay, the in-
+coming batch is decomposed into multiple sub-batches:
+Bk → {B (1)
+k , . . . , B(r)
+k }(48)
+whererdenotes the degree of parallelism, adaptively deter-
+mined by the number of feasible enclaves, their current queue
+states, EPC availability, and the estimated workload intensity
+ofB k. Each sub-batch is independently scheduled to a selected
+enclave for concurrent execution. This decomposition allows
+Spider++ to balance cryptographic workloads across multiple
+TEEs, improve throughput, and mitigate enclave contention
+caused by assigning the entire batch to a single secure execu-
+tion unit.
+Each sub-batch is independently scheduled:
+E∗(i) = arg minEnclaveScore(Ej,k, B(i)
+k )(49)
+This reduces processing latency and enables concurrent
+cryptographic operations.
+5) Admission Control:A task is admitted only if:
+M f ree
+j,k ≥αM req
+k (50)
+6) Stability Control:To prevent oscillation:
+∆Score≥ζ(51)
+7) Secure Delegation:If no feasible node exists, Spider++
+performs secure delegation:
+Ξk =ID k, M etak, CT partial
+k , Ak, Tk, σk (52)
+Delegation uses post-quantum key encapsulation (Kyber),
+ensuring confidentiality of intermediate states.
+The scheduling complexity is:
+O(|F |+
+X
+j
+mj)(53)
+where|F |is the number of fog nodes andm j is the number
+of enclaves per node.
+Spider transforms conventional fog scheduling into ahi-
+erarchical enclave-oriented orchestration frameworkthat
+jointly optimizes latency, security, and resource utilization. By
+integrating multi-enclave parallelism, EPC-aware scheduling,
+and trust-driven routing, the framework enables efficient and
+secure execution of cryptographic workloads in large-scale
+IIoT environments.
+
+
+========== PHASE 5 ==========
+Phase V: Multi-Enclave TEE-Assisted Split-Phase CP-
+ABE Processing:After receiving the validated batchB k, the
+selected fog nodeF ∗ performs secure batch processing using
+a two-level design: (i) enclave-parallel execution and (ii) split-
+phase CP-ABE encryption.
+Step 1: Batch Integrity Verification (REE):The fog node
+verifies batch integrity by recomputing:
+GT ag′ ←H(Sort(Auth i |P i ∈ P valid)∥t G)(54)
+The batch is accepted only ifGT ag ′ =GT ag.
+Algorithm 2Enclave-Parallel Processing at Fog Node
+Require:BatchB k, enclave setE ∗
+Ensure:(M agg , AADagg)
+1:VerifyGT ag
+2:ifinvalidthen return⊥
+3:end if
+4:PartitionB k →B (i)
+k
+5:for allB (i)
+k in paralleldo
+6:for allP ℓ ∈B (i)
+k do
+7:Decryptm ℓ
+8:end for
+9:AggregateM (i)
+agg , AAD(i)
+agg
+10:end for
+11:Merge all results
+12:return(M agg , AADagg)
+Step 2: Parallel Batch Decomposition:Based on Spider
+scheduling (Phase IV), the batch is either processed as a whole
+or decomposed:
+Bk →B (1)
+k , . . . , B(r)
+k (55)
+whereris determined by enclave availability and EPC
+constraints. Each sub-batch is assigned to an enclaveE ∗(i).
+Step 3: Enclave-Parallel Secure Processing (TEE):Each
+enclave processes its assigned sub-batch independently:
+mℓ ←ChaCha20-Poly1305.Dec(K S,ℓ, Nℓ, CTℓ, AADℓ, T agℓ)
+(56)
+Local aggregation:
+M(i)
+agg =m (i)
+1 ∥ · · · ∥m (i)
+si (57)
+AAD(i)
+agg =AAD (i)
+1 ∥ · · · ∥AAD (i)
+si (58)
+After all enclaves finish:
+Magg =r
+i=1 M(i)
+agg (59)
+AADagg =r
+i=1 AAD(i)
+agg (60)
+Insight:This design reduces decryption latency and avoids
+EPC bottlenecks.
+Step 4: Symmetric Encryption within TEE:After enclave-
+parallel aggregation, the fog node protects the aggregated
+plaintext before applying attribute-based encryption. A fresh
+symmetric key is generated inside the enclave:
+KAES ←0,1 256 (61)
+The aggregated data is then encrypted using authenticated
+encryption (AES-GCM):
+(CT AES , T agAES)←AES-GCM.Enc(K AES , IV, Magg , AADagg)
+(62)
+This step ensures confidentiality and integrity of the aggre-
+gated data, while enabling efficient hybrid encryption.
+Step 5: Partial CP-ABE Encryption within TEE:To securely
+encapsulate the symmetric key under an access policy, the
+enclave initiates a lattice-based CP-ABE encryption process.
+It samples secret and noise terms:
+s,e 0,e base ←χ(63)
+and constructs a secret-sharing vector:
+v= (s, y 2, . . . , yn)⊤ (64)
+The core ciphertext component is computed as:
+CT0 =A ⊤s+e 0 ∗K AES
+j q
+2
+k
+(modq)(65)
+To enable efficient offloading of policy expansion, the
+enclave generates a blinded base vector:
+Vbase =C base(T ID)·v+e base (66)
+Base Vector Optimization.Since the matrix transpose is
+independent of runtime randomness, it is precomputed and
+cached per policy. This avoids repeated matrix transformations
+during encryption.
+Cbase(T ID) =A ⊤ (67)
+Only non-sensitive intermediate values are exported to the
+REE:
+Ψout = (CT AES , T agAES , CT0,V base,T ID ,A)(68)
+Remark:All sensitive values, includings,v,K AES , and
+Magg, remain strictly inside the enclave and are erased after
+execution.
+Step 6: CP-ABE Completion in REE:The REE completes
+the encryption by expanding the access policy. Instead of
+recomputing the policy structure, it retrieves the precomputed
+LSSS representation from cache:
+(M, ρID)← C policy(T ID)(69)
+For each rowi, the ciphertext components are computed as:
+CT i =M i ·V base +A ⊤
+ρID(i)ri +e 1,i (modq)(70)
+The final CP-ABE ciphertext is constructed as:
+CT L-ABE =
+
+CT0,(M, ρ ID), CT ℓ
+i=1
+
+(71)
+This split-phase design ensures that sensitive cryptographic
+operations are confined within the TEE, while computationally
+intensive matrix operations are efficiently handled by the REE.
+Step 7: Signature and Upload:
+σ←Sign Dilithium(skF N, H(BID∥CT AES ∥CT L-ABE))
+(72)
+Ω =BID, CT AES , T agAES , IV, CT L-ABE , σ(73)
+Final Remark:Although execution is parallelized across
+enclaves, the system outputs a single ciphertextΩ, ensuring
+compatibility with standard CP-ABE decryption.
+
+
+========== PHASE 6 ==========
+Phase VI: User Verification and Decryption:An au-
+thorized user retrieves the encrypted packageΩfrom cloud
+storage.
+Step 1: Integrity and Authenticity Verification:The user first
+verifies the integrity and origin of the data using the fog node’s
+public key:
+VerifyDilithium(pkF N, σ, H(BID∥CT AES ∥CT L-ABE))
+(74)
+If verification fails, the ciphertext is rejected.
+Step 2: Policy Satisfaction Check:Let(M, ρ ID)be the
+LSSS representation embedded inCT L-ABE. The user checks
+whether their attribute setAttr u satisfies the access policy.
+If satisfied, the user derives reconstruction weightsω i such
+that: X
+i∈I
+ωiMi = (1,0, . . . ,0)(75)
+Step 3: Ciphertext Share Evaluation:Using the attribute-
+based secret keySK u, the user evaluates:
+C ′
+i ←Eval(CT i, SKu)≈M i ·V base +e eval,i (76)
+Step 4: Secret Reconstruction:The user reconstructs the
+blinded vector:
+Crec =
+X
+i∈I
+ωiC ′
+i ≈A ⊤s+e total (77)
+Step 5: Symmetric Key Recovery:The symmetric key is
+recovered by:
+KAES ←Decode(⌊CT 0 −C rec⌉2)(78)
+Step 6: Final Decryption:The aggregated plaintext is
+recovered as:
+Magg ←AES-GCM.Dec(K AES , IV, CT AES , T agAES)
+(79)
+This ensures that only users whose attributes satisfy the
+access policy can recover the underlying IIoT data.
+
+

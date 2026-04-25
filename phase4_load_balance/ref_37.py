@@ -5,25 +5,34 @@ A. M. Jasim and H. Al-Raweshidy, "An Adaptive SDN-Based Load
 Balancing Method for Edge/Fog-Based Real-Time Healthcare Systems,"
 IEEE Systems Journal, vol. 18, no. 2, pp. 1139-1150, June 2024.
 
-Algorithm:
-  SDN-GH uses a centralized SDN controller that maintains a global
-  view of node utilization and applies a **three-factor** greedy
-  heuristic combining queue load, service rate, and network latency:
+Algorithm (Algorithm 2, Eq. 8):
+  SDN-GH uses an SDN controller with a global network view that
+  performs BINARY OFFLOADING DECISIONS.  For each incoming task, the
+  controller checks whether offloading to another node would reduce
+  the total response time compared to local processing.
 
-    Score_GH(F_j) = α1 · (Q_j / Q_max)
-                  + α2 · (1 − μ_j / μ_max)
-                  + α3 · (L_j / L_max)
+  The offloading decision is:
+    T^{x2}_{x1} = 1  if t_offloading < t_local
+                  0  otherwise                        (Eq. 8)
 
-  The SDN controller collects flow statistics and performs pairwise
-  coordination across medical centers (MC), yielding complexity:
-    O(|MC|² + |MC| + P)
+  where:
+    t_local = Q_local / μ_local + t_proc(local)
+    t_offloading = t_communication + Q_remote / μ_remote + t_proc(remote)
 
-  Note: This simulation models a single-controller view (no MC
-  pairwise coordination) for fair comparison against Spider++.
+  The SDN controller collects workload, queue duration, and propagation
+  delay metrics.  If offloading is beneficial, the task is sent to the
+  candidate node with the minimum offloading time.
+
+  Implementation note: Paper [37] describes pairwise coordination
+  across Medical Centers (MCs).  This simulation models a single-
+  controller view for fair comparison against Spider++.  The
+  controller evaluates each candidate fog node as a potential
+  offload target.
 
 Characteristics vs Spider++:
-  - Three-factor scoring (queue + rate + latency) vs 7+ factors
-  - No EPC memory pressure tracking
+  - Binary offloading decision (not weighted multi-factor score)
+  - Two factors: processing time + communication overhead
+  - No EPC memory awareness
   - No trust/capability scoring
   - No intra-node enclave selection
   - No computation reuse awareness
@@ -39,35 +48,43 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.dataset_loader import DataLoader
 
-# SDN-GH weights (per paper [37] emphasis on load balancing)
-ALPHA1_QUEUE   = 0.5    # Queue load weight
-ALPHA2_RATE    = 0.3    # Service rate weight
-ALPHA3_LATENCY = 0.2    # Network latency weight
 
-
-def sdn_gh_score(fog_node, Q_max, mu_max, L_max):
+def estimate_local_time(fog_node):
     """
-    SDN-GH scoring: three-factor greedy heuristic per paper [37].
-    Score_GH = α1·(Q_j/Q_max) + α2·(1 − μ_j/μ_max) + α3·(L_j/L_max)
-    Lower score = better node.
+    Estimate local processing time per paper [37]:
+    t_local = (Q_local + 1) / μ_local
+    This represents queue waiting time + service time for the local node.
     """
     enclaves = fog_node["enclaves"]
-    Q_j = sum(e["queue_length"] for e in enclaves)
-    mu_j = sum(e["service_rate"] for e in enclaves) / max(1, len(enclaves))
-    L_j = fog_node.get("network_latency", 1.0)
+    total_q = sum(e["queue_length"] for e in enclaves)
+    total_rate = sum(e["service_rate"] for e in enclaves)
+    return (total_q + 1) / max(1, total_rate)
 
-    queue_factor = Q_j / max(1, Q_max)
-    rate_factor = 1.0 - (mu_j / max(1, mu_max))
-    latency_factor = L_j / max(1, L_max)
 
-    return (ALPHA1_QUEUE * queue_factor
-            + ALPHA2_RATE * rate_factor
-            + ALPHA3_LATENCY * latency_factor)
+def estimate_offload_time(fog_node):
+    """
+    Estimate offloading time per paper [37] Eq. 8:
+    t_offloading = t_communication + Q_remote / μ_remote + t_proc(remote)
+
+    t_communication includes propagation delay and result delivery time,
+    modelled as 2 × network_latency (round-trip).
+    """
+    enclaves = fog_node["enclaves"]
+    total_q = sum(e["queue_length"] for e in enclaves)
+    total_rate = sum(e["service_rate"] for e in enclaves)
+
+    # Communication cost: propagation delay (round-trip)
+    t_comm = 2.0 * fog_node.get("network_latency", 1.0)
+
+    # Remote processing: queue wait + service
+    t_proc_remote = (total_q + 1) / max(1, total_rate)
+
+    return t_comm + t_proc_remote
 
 
 def run_phase4_ref37():
     print("=" * 60)
-    print("PQ-SPIDER Phase IV: SDN-GH Greedy Scheduling (Ref [37])")
+    print("PQ-SPIDER Phase IV: SDN-GH Binary Offloading (Ref [37])")
     print("=" * 60)
 
     loader = DataLoader()
@@ -83,7 +100,7 @@ def run_phase4_ref37():
 
     packets = batch["packets"]
     print(f"  -> Scheduling {len(packets)} packets across "
-          f"{len(fog_nodes)} fog nodes (SDN-GH: queue+rate+latency).")
+          f"{len(fog_nodes)} fog nodes (SDN-GH: binary offloading, Eq. 8).")
 
     metrics = {
         "node_scoring_per_pkt":    [],
@@ -94,38 +111,48 @@ def run_phase4_ref37():
 
     start = time.perf_counter()
 
+    # Default local node = node 0 (simulates the originating MC)
     for p in packets:
         t0 = time.perf_counter()
 
-        # SDN controller maintains global view — compute normalization
-        Q_max = max(
-            sum(e["queue_length"] for e in fn["enclaves"])
-            for fn in fog_nodes
-        )
-        mu_max = max(
-            sum(e["service_rate"] for e in fn["enclaves"])
-            / max(1, len(fn["enclaves"]))
-            for fn in fog_nodes
-        )
-        L_max = max(
-            fn.get("network_latency", 1.0)
-            for fn in fog_nodes
-        )
+        # SDN-GH Algorithm 2: For each task, the SDN controller:
+        # 1. Computes t_local for the default node
+        # 2. Evaluates t_offloading to each candidate
+        # 3. If any t_offloading < t_local, offload to the best candidate
 
-        # Score all nodes with three-factor greedy heuristic
-        node_scores = []
-        for fn in fog_nodes:
-            s = sdn_gh_score(fn, Q_max, mu_max, L_max)
-            node_scores.append((fn, s))
+        # Default: assign to node with minimum current queue (local MC)
+        local_idx = min(range(len(fog_nodes)),
+                        key=lambda i: sum(e["queue_length"]
+                                          for e in fog_nodes[i]["enclaves"]))
+        local_node = fog_nodes[local_idx]
+        t_local = estimate_local_time(local_node)
+
+        # Evaluate offloading candidates (Eq. 8)
+        best_offload_idx = None
+        best_offload_time = t_local  # Only offload if faster than local
+
+        for idx, fn in enumerate(fog_nodes):
+            if idx == local_idx:
+                continue
+            t_off = estimate_offload_time(fn)
+            # Eq. 8: T^{x2}_{x1} = 1 if t_offloading < t_local
+            if t_off < best_offload_time:
+                best_offload_time = t_off
+                best_offload_idx = idx
+
+        # Decision: offload if beneficial, otherwise process locally
+        if best_offload_idx is not None:
+            chosen_node = fog_nodes[best_offload_idx]
+            score_val = best_offload_time
+        else:
+            chosen_node = local_node
+            score_val = t_local
 
         metrics["node_scoring_per_pkt"].append(
             (time.perf_counter() - t0) * 1000)
 
-        # Select node with lowest greedy score
-        node_scores.sort(key=lambda x: x[1])
-        chosen_node, score_val = node_scores[0]
-
-        # SDN-GH has no enclave-level scheduling — pick min-queue enclave
+        # SDN-GH has no enclave-level scheduling — assign to enclave
+        # with shortest queue (consistent heuristic across baselines)
         chosen_enc = min(chosen_node["enclaves"],
                          key=lambda e: e["queue_length"])
 

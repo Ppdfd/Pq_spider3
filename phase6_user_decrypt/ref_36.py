@@ -19,6 +19,12 @@ CHANGES vs original:
              construction, not this re-implementation.  We measure
              decryption TIMING only; recovered bytes are not
              verified.
+
+AUDIT DISCLAIMER (Graph 4):
+  When Ref [36] appears in Graph 4 (decryption latency), the reported
+  times reflect the COMPUTATIONAL COST of the MLWE polynomial
+  operations (Algorithm 2), but the decrypted output is NOT verified
+  for correctness.  The graph caption should disclose this.
 """
 
 import sys

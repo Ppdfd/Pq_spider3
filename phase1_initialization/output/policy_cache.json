@@ -39,5 +39,46 @@
                 "ZoneA"
             ]
         }
+    },
+    "t_id_policy": {
+        "type": "AND",
+        "attributes": [
+            "516",
+            "1733"
+        ]
+    },
+    "t_id_pkg": {
+        "M": [
+            [
+                1,
+                1
+            ],
+            [
+                0,
+                -1
+            ]
+        ],
+        "rho": [
+            "516",
+            "1733"
+        ],
+        "tree": {
+            "op": "AND",
+            "children": [
+                {
+                    "attr": "516"
+                },
+                {
+                    "attr": "1733"
+                }
+            ]
+        },
+        "policy": {
+            "type": "AND",
+            "attributes": [
+                "516",
+                "1733"
+            ]
+        }
     }
 }

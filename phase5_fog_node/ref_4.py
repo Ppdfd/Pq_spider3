@@ -7,6 +7,15 @@ Step 1: Ciphertext Validation — verify Poly1305 tag on outer_ct.
 Step 2: Flexible Attribute Augmentation — add Sum(beta_i * C_i) to C_r.
 Step 3: Digital Signing — Dilithium2 over serialized outer_ct.
 Step 4: Output CT_final.
+
+AUDIT NOTE (Synthetic C_flex_i):
+  The flexible-attribute ciphertext components C_flex_i used in beta
+  augmentation (Step 2) are SYNTHETICALLY GENERATED from seeded PRNG,
+  not from real ciphertext attribute components.  The paper's Alg 2
+  Step 12-15 specifies C_i from the IoT device's Phase 3 output, but
+  the ref_4 Phase 2 implementation only encrypts strict attributes.
+  The augmentation is structurally correct (same add/subtract cancels
+  out in Phase 5 stripping), but operates on synthetic data.
 """
 
 import os

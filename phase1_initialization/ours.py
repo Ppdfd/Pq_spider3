@@ -1,20 +1,34 @@
 """
 Phase I (Ours): PQ-SPIDER System Initialization
 ===================================================================
-Matches PQ-SPIDER paper Sec III-C, Phase I (Eq 1-12):
+Matches PQ-SPIDER paper Sec III-C, Phase I (Eq 1-12 + Policy Prep):
 
-  Eq 1:  ID_j = H(attr_j)                        — Attribute hashing
-  Eq 2:  (MPK, MSK) ← Setup(1^λ, {ID_j})         — Lattice trapdoor gen
-  Eq 3:  (M, ρ_ID) ← PolicyTreeGen(T_ID)         — LSSS precomputation
-  Eq 4:  C_policy(T_ID) = (M, ρ_ID)              — Cache for reuse
-  Eq 5:  SK_u ← KeyGen(MSK, {ID_j}_{j ∈ Attr_u}) — User key
-  Eq 6:  (pk_GW, sk_GW) ← KeyGen_Kyber(1^λ)     — Gateway Kyber
-  Eq 7:  (c_gkem, k_gkem) ← Encap_Kyber(pk_GW)  — Device-GW encap
-  Eq 8:  (pk_FN, sk_FN) ← KeyGen_Kyber(1^λ)     — Fog Kyber
-  Eq 9:  A ← ExpandA(seed_FN)                    — Kyber precomputation
-  Eq 10: Â = NTT(A)                              — NTT cache
-  Eq 11: C_Kyber(F_j) = Â                        — Persisted for reuse
-  Eq 12: F_j = {E_{j,k} | k=1,...,m_j}           — Enclave instantiation
+  AA Setup:
+    Eq 1:  ID_j = H(attr_j)                        — Attribute hashing
+    Eq 2:  (MPK, MSK) ← Setup(1^λ, {ID_j})         — Lattice trapdoor gen
+           For each attr: t_j ← small_vec, u_j = A^T · t_j  (dual-Regev keys)
+    Eq 3:  (M, ρ_ID) ← PolicyTreeGen(T_ID)         — LSSS precomputation
+    Eq 4:  C_policy(T_ID) = (M, ρ_ID)              — Cache for reuse
+    Eq 5:  SK_u ← KeyGen(MSK, {ID_j}_{j ∈ Attr_u}) — User key
+
+  Gateway Initialization:
+    Eq 6:  (pk_GW, sk_GW) ← KeyGen_Kyber(1^λ)     — Gateway Kyber
+    Eq 7:  (c_gkem, k_gkem) ← Encap_Kyber(pk_GW)  — Device-GW encap
+
+  Fog Node Initialization:
+    Eq 8:  (pk_FN, sk_FN) ← KeyGen_Kyber(1^λ)     — Fog Kyber
+
+  Kyber Precomputation:
+    Eq 9:  A ← ExpandA(seed_FN)                    — Kyber precomputation
+    Eq 10: Â = NTT(A)                              — NTT cache
+    Eq 11: C_Kyber(F_j) = Â                        — Persisted for reuse
+
+  Enclave Instantiation:
+    Eq 12: F_j = {E_{j,k} | k=1,...,m_j}           — Enclave instantiation
+
+  Policy Preparation (NEW):
+    Devices pre-compute hashed attribute identifiers and construct
+    T_ID using {ID_j}, ensuring semantic privacy during encryption.
 """
 
 import os
@@ -50,10 +64,12 @@ def run_phase1_simulation():
 
     metrics = {
         "aa_setup": 0,
+        "attr_keygen": 0,
         "policy_precompute": 0,
         "user_keygen": 0,
         "gateway_init": 0,
         "fog_node_init": [],
+        "kyber_precompute": [],
         "device_precompute": [],
         "total_init": 0
     }
@@ -63,20 +79,34 @@ def run_phase1_simulation():
     # ── Step 1: Attribute Authority (AA) Setup ──
     # Eq 1: ID_j = H(attr_j) for each attr in universe
     # Eq 2: (MPK, MSK) ← Setup(1^λ, {ID_j})
-    print("[1/6] Initializing Attribute Authority (CP-ABE Setup)...")
+    #        Generates matrix A and dual-Regev keys (t_j, u_j) for ALL attributes
+    print("[1/7] Initializing Attribute Authority (CP-ABE Setup)...")
     t0 = time.perf_counter()
     aa = LatticeCPABE(n=CPABE_N, q=CPABE_Q)
     universe = config.CP_ABE_UNIVERSE
+    # Eq 2: Generate MPK (matrix A)
     aa.setup()
+    # Eq 1: Hash all attributes in universe → ID_j = H(attr_j)
     hashed_ids = {attr: aa.hash_attribute(attr) for attr in universe}
     t_aa = (time.perf_counter() - t0) * 1000
     metrics["aa_setup"] = t_aa
     print(f"  -> AA Setup Completed: {t_aa:.2f} ms (n={CPABE_N}, q={CPABE_Q})")
 
+    # Eq 2 cont.: Generate dual-Regev key pairs for ALL attributes
+    #   For each attr: t_j ← small_vec(n), u_j = A^T · t_j mod q
+    #   This binds public parameter matrices to the hashed identifiers
+    print("  -> Generating dual-Regev keys for attribute universe...")
+    t0 = time.perf_counter()
+    _ = aa.keygen({}, universe)
+    t_attr_kg = (time.perf_counter() - t0) * 1000
+    metrics["attr_keygen"] = t_attr_kg
+    print(f"  -> Attribute KeyGen: {t_attr_kg:.2f} ms ({len(universe)} attributes)")
+
     # ── Step 2: LSSS Policy Precomputation ──
     # Eq 3: (M, ρ_ID) ← PolicyTreeGen(T_ID)
     # Eq 4: C_policy(T_ID) = (M, ρ_ID) — cached for reuse in Phase V
-    print("\n[2/6] Precomputing LSSS Policy (C_policy cache)...")
+    #        Uses hashed IDs (not semantic labels) to preserve privacy
+    print("\n[2/7] Precomputing LSSS Policy (C_policy cache)...")
     t0 = time.perf_counter()
     policy = {"type": "AND", "attributes": config.USER_ATTRIBUTES}
     policy_pkg = aa.ree_build_policy(policy)
@@ -86,7 +116,7 @@ def run_phase1_simulation():
 
     # ── Step 3: User Registration ──
     # Eq 5: SK_u ← KeyGen(MSK, {ID_j}_{j ∈ Attr_u})
-    print("\n[3/6] Registering Authorized User (KeyGen)...")
+    print("\n[3/7] Registering Authorized User (KeyGen)...")
     t0 = time.perf_counter()
     user_attributes = config.USER_ATTRIBUTES
     sk_u = aa.keygen({}, user_attributes)
@@ -96,7 +126,7 @@ def run_phase1_simulation():
 
     # ── Step 4: Gateway Initialization ──
     # Eq 6: (pk_GW, sk_GW) ← KeyGen_Kyber(1^λ)
-    print("\n[4/6] Initializing Edge Gateway (Kyber KeyGen)...")
+    print("\n[4/7] Initializing Edge Gateway (Kyber KeyGen)...")
     t0 = time.perf_counter()
     kyber_gw = SecureKyber()
     pk_gw, sk_gw = kyber_gw.keygen()
@@ -104,15 +134,15 @@ def run_phase1_simulation():
     metrics["gateway_init"] = t_gw
     print(f"  -> Edge Gateway Ready ({t_gw:.2f} ms)")
 
-    # ── Step 5: Fog Node Initialization ──
-    # Eq 8:  (pk_FN, sk_FN) ← KeyGen_Kyber(1^λ)
-    # Eq 9:  A ← ExpandA(seed_FN)         — Kyber matrix precomputation
-    # Eq 10: Â = NTT(A)                   — NTT domain cache
-    # Eq 11: C_Kyber(F_j) = Â             — Persisted for reuse scoring
-    # Eq 12: F_j = {E_{j,k}}              — Enclave instantiation
+    # ── Step 5: Fog Node Initialization + Kyber Precomputation ──
+    # Eq 8:  (pk_FN, sk_FN) ← KeyGen_Kyber(1^λ)     — Fog Kyber keypair
+    # Eq 9:  A ← ExpandA(seed_FN)                    — Kyber matrix expansion
+    # Eq 10: Â = NTT(A)                              — NTT domain cache
+    # Eq 11: C_Kyber(F_j) = Â                        — Persisted for reuse
+    # Eq 12: F_j = {E_{j,k}}                         — Enclave instantiation
     num_fog_nodes = config.NUM_GLOBAL_NODES
-    print(f"\n[5/6] Initializing {num_fog_nodes} Fog Nodes "
-          f"(Kyber + Dilithium + NTT precompute)...")
+    print(f"\n[5/7] Initializing {num_fog_nodes} Fog Nodes "
+          f"(Kyber + Dilithium + Kyber Precomputation + Enclaves)...")
 
     fog_nodes = []
     ENC_PER_NODE = config.ENC_PER_NODE
@@ -158,15 +188,20 @@ def run_phase1_simulation():
         # Eq 8: Kyber KEM keypair
         pk, sk = kyber_fn.keygen()
 
-        # Eq 9-11: Kyber precomputation — expand A via SHAKE256
+        # Eq 9-11: Kyber Precomputation — expand A via SHAKE256
+        t_kyber_pre = time.perf_counter()
         seed_fn = hashlib.sha256(pk[:32]).digest()
-        # Vectorized: single SHAKE digest → extract 256 coefficients
+        # Eq 9: A ← ExpandA(seed_FN) — SHAKE256 expansion
         shake = hashlib.shake_256(seed_fn)
         raw = shake.digest(256 * 2)  # 2 bytes per coefficient
         A_expanded = np.frombuffer(raw, dtype=np.uint16).astype(np.int64) % 3329
-        # NTT cache (Eq 10): Â = NTT(A)
+        # Eq 10: Â = NTT(A) — NTT domain cache
         A_hat = np.fft.fft(A_expanded.astype(np.float64)).real.astype(np.int64) % 3329
+        # Eq 11: C_Kyber(F_j) = Â — persisted for reuse scoring
         kyber_cache = {"A_hat": A_hat.tolist(), "has_cache": True}
+        metrics["kyber_precompute"].append(
+            (time.perf_counter() - t_kyber_pre) * 1000
+        )
 
         # Dilithium signing keypair (charged to Phase I per audit)
         pk_sig, sk_sig = dil_fn.keygen()
@@ -228,11 +263,12 @@ def run_phase1_simulation():
 
     # ── Step 6: IIoT Device Initialization ──
     # Eq 7: (c_gkem, k_gkem) ← Encap_Kyber(pk_GW)
-    print("\n[6/6] Initializing IIoT Devices "
+    print("\n[6/7] Initializing IIoT Devices "
           "(PUF Generation + Gateway Encap)...")
     device_registry = []
     num_devices = config.NUM_DEVICES
     kyber_dev = SecureKyber()      # reuse one instance for all devices
+
     for i in range(num_devices):
         t0 = time.perf_counter()
         device_id = f"IIoT-DEV-{i:03d}"
@@ -242,15 +278,34 @@ def run_phase1_simulation():
         r_noisy = puf.evaluate(challenge)
         r_secret, _ = FuzzyExtractor.generate(r_noisy)
 
+        # Eq 7: (c_gkem, k_gkem) ← Encap_Kyber(pk_GW)
         cg_kem, kg_kem = kyber_dev.encap(pk_gw)
 
         device_registry.append({
             "device_id": device_id,
             "r_secret": r_secret.hex(),
             "cg_kem": cg_kem.hex(),
-            "kg_kem": kg_kem.hex()
+            "kg_kem": kg_kem.hex(),
         })
         metrics["device_precompute"].append((time.perf_counter() - t0) * 1000)
+
+    # ── Step 7: Policy Preparation (Device/Gateway-Side) ──
+    # Paper: "IIoT devices (or associated gateways) pre-compute hashed
+    # attribute identifiers and construct the access policy tree T_ID
+    # using {ID_j}, ensuring that no semantic attribute information is
+    # exposed during encryption and evaluation."
+    print("\n[7/7] Policy Preparation "
+          "(Hashing attribute IDs + Constructing T_ID)...")
+    t0 = time.perf_counter()
+    # Construct T_ID using hashed identifiers (not semantic labels)
+    hashed_user_attrs = [str(hashed_ids[attr]) for attr in config.USER_ATTRIBUTES]
+    t_id_policy = {"type": "AND", "attributes": hashed_user_attrs}
+    # Pre-build LSSS from T_ID for reuse at encryption time
+    t_id_pkg = aa.ree_build_policy(t_id_policy)
+    t_policy_prep = (time.perf_counter() - t0) * 1000
+    metrics["policy_preparation"] = t_policy_prep
+    print(f"  -> T_ID constructed with {len(hashed_user_attrs)} hashed attributes: "
+          f"{t_policy_prep:.2f} ms")
 
     metrics["total_init"] = (time.perf_counter() - start_total) * 1000
 
@@ -279,6 +334,9 @@ def run_phase1_simulation():
     policy_cache = {
         "policy": policy,
         "policy_pkg": _to_py(policy_pkg),
+        # Policy Preparation: T_ID constructed with hashed identifiers
+        "t_id_policy": t_id_policy,
+        "t_id_pkg": _to_py(t_id_pkg),
     }
 
     loader = DataLoader()

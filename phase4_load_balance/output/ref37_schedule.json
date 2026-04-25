@@ -2,72 +2,72 @@
     "assignments": [
         {
             "device": "IIoT-DEV-000",
-            "fog_node": 1,
-            "enclave": "E_1_0",
-            "node_score": 0.0382,
+            "fog_node": 0,
+            "enclave": "E_0_0",
+            "node_score": 0.0013,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-001",
-            "fog_node": 2,
-            "enclave": "E_2_0",
-            "node_score": 0.0857,
+            "fog_node": 1,
+            "enclave": "E_1_0",
+            "node_score": 0.001,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-002",
-            "fog_node": 0,
-            "enclave": "E_0_0",
-            "node_score": 0.0969,
+            "fog_node": 2,
+            "enclave": "E_2_0",
+            "node_score": 0.0011,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-003",
-            "fog_node": 4,
-            "enclave": "E_4_0",
-            "node_score": 0.1772,
+            "fog_node": 3,
+            "enclave": "E_3_0",
+            "node_score": 0.0024,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-004",
-            "fog_node": 5,
-            "enclave": "E_5_0",
-            "node_score": 0.1825,
+            "fog_node": 4,
+            "enclave": "E_4_0",
+            "node_score": 0.002,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-005",
-            "fog_node": 3,
-            "enclave": "E_3_0",
-            "node_score": 0.1926,
+            "fog_node": 5,
+            "enclave": "E_5_0",
+            "node_score": 0.002,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-006",
             "fog_node": 6,
             "enclave": "E_6_0",
-            "node_score": 0.1999,
+            "node_score": 0.0021,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-007",
-            "fog_node": 8,
-            "enclave": "E_8_0",
-            "node_score": 0.3084,
+            "fog_node": 7,
+            "enclave": "E_7_0",
+            "node_score": 0.008,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-008",
-            "fog_node": 9,
-            "enclave": "E_9_0",
-            "node_score": 0.3195,
+            "fog_node": 8,
+            "enclave": "E_8_0",
+            "node_score": 0.0059,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-009",
-            "fog_node": 7,
-            "enclave": "E_7_0",
-            "node_score": 0.3248,
+            "fog_node": 9,
+            "enclave": "E_9_0",
+            "node_score": 0.006,
             "enclave_score": 0
         }
     ]

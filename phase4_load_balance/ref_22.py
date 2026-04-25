@@ -15,6 +15,16 @@ Algorithm:
 
   Complexity: O(T · |F|)  — full-state query per task.
 
+AUDIT NOTE (Node Model Mismatch):
+  Paper [22] uses iFogSim with simple fog nodes characterised only
+  by processing capacity and network latency.  This implementation
+  operates on Spider++'s fog node model (with enclaves, EPC budgets,
+  trust scores), none of which exist in Paper [22].  The OLB scoring
+  formula L_net + (Q+1)/μ is a REASONABLE APPROXIMATION of [22]'s
+  intent (minimize total latency = network + processing), but it is
+  not the paper's exact algorithm.  OLB's inner enclave selection
+  (min queue) is a consistency shim — Paper [22] has no enclave concept.
+
 Characteristics vs Spider++:
   - Single-level scheduling (no intra-node enclave selection)
   - Two-factor latency estimate (network + queue/rate)
@@ -41,8 +51,8 @@ def olb_score(fog_node):
     """
     enclaves = fog_node["enclaves"]
     total_q = sum(e["queue_length"] for e in enclaves)
-    avg_rate = sum(e["service_rate"] for e in enclaves) / max(1, len(enclaves))
-    processing_est = (total_q + 1) / max(1, avg_rate)
+    total_rate = sum(e["service_rate"] for e in enclaves)
+    processing_est = (total_q + 1) / max(1, total_rate)
     network_lat = fog_node.get("network_latency", 1.0)
     return network_lat + processing_est
 

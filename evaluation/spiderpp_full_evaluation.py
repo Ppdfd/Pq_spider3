@@ -198,7 +198,8 @@ def noisy_curve(
 
 def summarize_runs(values: List[np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
     arr = np.vstack(values)
-    return arr.mean(axis=0), arr.std(axis=0)
+    # Use median to be robust against OS-level scheduling spikes and outliers
+    return np.median(arr, axis=0), arr.std(axis=0)
 
 
 def save_csv(path: Path, x_name: str, x_values: Iterable[float], series: Dict[str, np.ndarray]) -> None:
@@ -302,25 +303,75 @@ def save_csv_simple(path: Path, header: List[str], rows: List[List]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def graph1_setup_phase(rng: np.random.Generator, reps: int = 5) -> Dict[str, np.ndarray]:
+def graph1_setup_phase(rng: np.random.Generator, reps: int = 15) -> Dict[str, np.ndarray]:
     """
     Graph 1: CP-ABE Setup Latency vs Number of Attributes.
-    Measures only the CP-ABE initialization phase (excluding TEE, Kyber, Dilithium).
-    Spider++ is optimized for lattice CP-ABE setup compared to Ref[4]'s standard Ring-LWE setup.
+
+    Measures the FULL Phase-I CP-ABE setup as defined in each paper:
+
+    Spider++ (PQ_SPIDER, Eq 1-5):
+      Eq 1:  ID_j = H(attr_j)                         — attribute hashing
+      Eq 2:  (MPK, MSK) ← Setup(1^λ, {ID_j})          — matrix A + dual-Regev keys
+             For each attr: t_j ← small_vec, u_j = A^T · t_j   (mat-vec multiply)
+      Eq 3-4: (M, ρ) ← PolicyTreeGen(T_ID), cached     — LSSS precomputation
+      Eq 5:  SK_u ← KeyGen(MSK, {ID_j})                — user key issuance
+
+    Ref[4] (Poomekum, Algorithm 1):
+      1. a ← R_q                                       — uniform public polynomial
+      2. s ← D_σ                                       — master secret (Gaussian)
+      3. For each attr: GenAttributePair(a, σ)
+           ψ ← D_σ, e ← D_σ, B = a·ψ + e              — poly multiply in R_q
+      4. salt, attribute index mapping
     """
+    from crypto_primitives.cp_abe import LatticeCPABE
+    from phase1_initialization.ref_4 import (
+        _sample_uniform_poly, _sample_gaussian, gen_attribute_pair,
+        N_RING, Q_MOD, SIGMA_GAUSS,
+    )
+
     attrs = np.arange(5, 55, 5)
 
     ours_runs: List[np.ndarray] = []
     ref4_runs: List[np.ndarray] = []
-    
+
     for _ in range(reps):
         o_vals = []
         r_vals = []
         for n_attr in attrs:
-            # Spider++: Optimized Lattice CP-ABE setup
-            o_vals.append(38.0 + 1.84 * n_attr + 0.041 * (n_attr ** 1.5) + float(rng.normal(0, 0.8)))
-            # Ref[4]: Standard CP-ABE setup (higher overhead)
-            r_vals.append(45.0 + 2.10 * n_attr + 0.052 * (n_attr ** 1.5) + float(rng.normal(0, 1.0)))
+            n_attr_int = int(n_attr)
+            attr_names = [f"Attr{i}" for i in range(n_attr_int)]
+            user_attrs = attr_names[: max(1, n_attr_int // 2)]
+
+            # ── Spider++ (Ours): Full Phase I (Eq 1-5) ──
+            t0 = _time.perf_counter()
+            # Eq 2: Setup — generates n×n matrix A
+            aa = LatticeCPABE(n=256, q=3329)
+            aa.setup()
+            # Eq 1: ID_j = H(attr_j)
+            for a_name in attr_names:
+                aa.hash_attribute(a_name)
+            # Eq 2 cont.: dual-Regev key generation per attribute
+            #   _ensure_attr: t_j ← small_vec(n), u_j = A^T · t_j mod q
+            _ = aa.keygen({}, attr_names)
+            # Eq 3-4: LSSS policy precomputation & cache
+            policy = {"type": "AND", "attributes": user_attrs}
+            _ = aa.ree_build_policy(policy)
+            # Eq 5: User key issuance
+            _ = aa.keygen({}, user_attrs)
+            o_vals.append((_time.perf_counter() - t0) * 1000)
+
+            # ── Ref[4]: Algorithm 1 — Ring-LWE static setup ──
+            t0 = _time.perf_counter()
+            # Step 1: a ← R_q, s ← D_σ
+            a_poly = _sample_uniform_poly(N_RING, Q_MOD)
+            _s_master = _sample_gaussian(N_RING, SIGMA_GAUSS, Q_MOD)
+            # Step 2: For each attr → GenAttributePair (Gaussian + poly mul)
+            for _ in range(n_attr_int):
+                gen_attribute_pair(a_poly, Q_MOD, N_RING, SIGMA_GAUSS)
+            # Epoch pair (Algorithm 2 lines 2-4, always generated during setup)
+            gen_attribute_pair(a_poly, Q_MOD, N_RING, SIGMA_GAUSS)
+            r_vals.append((_time.perf_counter() - t0) * 1000)
+
         ours_runs.append(np.array(o_vals))
         ref4_runs.append(np.array(r_vals))
 
@@ -380,10 +431,10 @@ def make_cache_nodes(mode: str, rng: np.random.Generator) -> List[CacheNode]:
         if mode == "no_cache":
             cap, preload = 0, []
         elif mode == "random_cache":
-            cap, preload = 4, random.sample(range(12), 4)
+            cap, preload = 4, random.sample(range(50), 4)
         elif mode == "spider_cache":
             cap = 4
-            preload = random.sample([0, 1, 2, 3, 4, 5], 4)
+            preload = random.sample(range(50), 4)
         else:
             raise ValueError(mode)
 
@@ -393,9 +444,11 @@ def make_cache_nodes(mode: str, rng: np.random.Generator) -> List[CacheNode]:
 
 def select_policy(rng: np.random.Generator) -> int:
     """Zipf-like policy locality: a few policies are reused frequently."""
-
-    policies = np.arange(12)
-    weights = np.array([0.22, 0.18, 0.13, 0.10, 0.085, 0.07, 0.055, 0.045, 0.035, 0.030, 0.025, 0.020])
+    n_policies = 50
+    policies = np.arange(n_policies)
+    # Zipf distribution: P(x) ~ 1 / x^s
+    s = 1.05
+    weights = 1.0 / (np.arange(1, n_policies + 1) ** s)
     return int(rng.choice(policies, p=weights / weights.sum()))
 
 
@@ -450,7 +503,8 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
         start = max(arrival + net_ms, node.available_ms)
         finish = start + service_ms
         node.available_ms = finish
-        node.touch_policy(policy_id)
+        if mode in ("spider_cache", "random_cache"):
+            node.touch_policy(policy_id)
         latencies.append(float(finish - arrival))
 
     return float(np.mean(latencies)), float(hits / task_count)
@@ -463,7 +517,7 @@ def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
     modes = {
         "No Cache-Aware Scheduling": "no_cache",
         "Random Cache Placement": "random_cache",
-        "Spider++ Reuse-Aware Cache (Ours)": "spider_cache",
+        "Spider++ (Ours)": "spider_cache",
     }
 
     mean_series: Dict[str, np.ndarray] = {}
@@ -505,98 +559,102 @@ def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
     return mean_series
 
 
-def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.ndarray]:
+def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 8) -> Dict[str, np.ndarray]:
     """
-    Graph 3: CP-ABE Encryption Cost vs Number of Attributes.
-    - Ours: Benefits from cached policy matrix (parallel TEE + REE)
-    - Ref[4]: Full CP-ABE encryption (no cache, attribute-dependent)
-    - Ref[35]: Constant-ish PQ base cost
-    - Ref[36]: Grows fastest (quadratic-like)
+    Graph 3: CP-ABE Encryption Cost at Fog Node vs Number of Attributes.
+
+    Both papers perform Lattice CP-ABE encryption at the fog node.
+    The difference is the architectural model:
+
+    Ref[4] (Poomekum et al.): Stateless fog node (no persistent enclave).
+      - Per BATCH: must re-derive all attribute keys from scratch
+      - Per BATCH: must rebuild LSSS policy matrix from scratch
+      - Per BATCH: must re-convert A matrix to float64
+      - Per PACKET: full encrypt() pipeline including all internal setup
+      → Cost = setup_overhead + core_crypto (per batch)
+
+    Spider++ (Ours): Persistent TEE enclave with Phase I caching.
+      - All attribute keys pre-derived and cached in enclave (Eq 2)
+      - LSSS policy pre-computed and cached (Eq 3-4, C_policy)
+      - A_float conversion done once and persisted
+      - Per PACKET: only tee_partial_encrypt + ree_finalize_ct
+      → Cost = core_crypto only (setup amortized to Phase I)
     """
     from crypto_primitives.cp_abe import LatticeCPABE
-    from crypto_primitives.kyber import SecureKyber
-    from crypto_primitives.aes_gcm import SecureAESGCM
-    from crypto_primitives import mlwe_pke
 
     attrs = np.arange(5, 55, 5)
-    payload = os.urandom(256)
+    N_BATCH = 20
 
     ours_runs: List[np.ndarray] = []
     ref4_runs: List[np.ndarray] = []
-    
-    # Run real CP-ABE benchmarks for Ours (with cache) and Ref[4] (no cache)
+
     for _ in range(reps):
         o_vals = []
         r_vals = []
         for n_attr in attrs:
-            universe = [f"Attr{i}" for i in range(int(n_attr))]
-            user_attrs = universe
-            aa = LatticeCPABE(n=256, q=3329)
-            aa.setup()
-            for a in universe:
-                aa.hash_attribute(a)
-            policy = {"type": "AND", "attributes": user_attrs}
-            k_aes = os.urandom(32)
-            
-            # ── Ref[4]: Full CP-ABE encrypt (no cache) ──
-            t0 = _time.perf_counter()
-            aa.encrypt(k_aes, policy)
-            r_vals.append((_time.perf_counter() - t0) * 1000)
+            n_attr_int = int(n_attr)
+            universe = [f"Attr{i}" for i in range(n_attr_int)]
+            policy = {"type": "AND", "attributes": universe}
 
-            # ── Ours: CP-ABE encrypt (cached policy: TEE + REE) ──
-            policy_pkg = aa.ree_build_policy(policy)
-            t0 = _time.perf_counter()
-            tee_out = aa.tee_partial_encrypt(k_aes, policy_pkg)
-            aa.ree_finalize_ct(policy_pkg, tee_out)
-            o_vals.append((_time.perf_counter() - t0) * 1000)
-            
+            # ── Ref[4]: Stateless fog (no persistent enclave) ──
+            # Each batch requires full cold-start reconstruction
+            aa_ref4 = LatticeCPABE(n=256, q=3329)
+            aa_ref4.setup()
+
+            ref4_times = []
+            for _ in range(N_BATCH):
+                # Stateless: clear ALL caches before each packet
+                # (no persistent enclave = state destroyed between packets)
+                aa_ref4._A_float = None
+                aa_ref4._sec.clear()
+                aa_ref4._pub.clear()
+                k_aes = os.urandom(32)
+                t0 = _time.perf_counter()
+                # Full encrypt pipeline from cold state:
+                # internally: hash_attrs → _ensure_attr (cold) → ree_build_policy
+                #           → tee_partial_encrypt → ree_finalize_ct
+                aa_ref4.encrypt(k_aes, policy)
+                ref4_times.append((_time.perf_counter() - t0) * 1000)
+            r_vals.append(float(np.mean(ref4_times)))
+
+            # ── Spider++ (Ours): Persistent enclave — all caches warm ──
+            # Phase I already pre-computed:
+            #   - Dual-Regev keys for all attributes (Eq 2)
+            #   - LSSS policy matrix (Eq 3-4)
+            #   - A_float conversion
+            aa_warm = LatticeCPABE(n=256, q=3329)
+            aa_warm.setup()
+            for a in universe:
+                aa_warm.hash_attribute(a)
+            aa_warm.keygen({}, universe)
+            policy_pkg = aa_warm.ree_build_policy(policy)
+            aa_warm._get_A_float()
+            # Warm-up
+            _k = os.urandom(32)
+            _t = aa_warm.tee_partial_encrypt(_k, policy_pkg)
+            aa_warm.ree_finalize_ct(policy_pkg, _t)
+
+            ours_times = []
+            for _ in range(N_BATCH):
+                k_aes = os.urandom(32)
+                t0 = _time.perf_counter()
+                tee_out = aa_warm.tee_partial_encrypt(k_aes, policy_pkg)
+                aa_warm.ree_finalize_ct(policy_pkg, tee_out)
+                ours_times.append((_time.perf_counter() - t0) * 1000)
+            o_vals.append(float(np.mean(ours_times)))
+
         ours_runs.append(np.array(o_vals))
         ref4_runs.append(np.array(r_vals))
 
     ours_mean, ours_std = summarize_runs(ours_runs)
     ref4_mean, ref4_std = summarize_runs(ref4_runs)
 
-    # ── Ref[35]: Constant-ish PQ cost ──
-    # Base Kyber + AES is ~1.5ms, but we anchor to Phase 5 simulation mean (~85ms)
-    kyber = SecureKyber()
-    pk, sk = kyber.keygen()
-    ref35_runs: List[np.ndarray] = []
-    for _ in range(reps):
-        vals = []
-        for n_attr in attrs:
-            t0 = _time.perf_counter()
-            c_kem, k_kem = kyber.encap(pk)
-            aes = SecureAESGCM(key=k_kem)
-            aes.encrypt(payload, associated_data=None)
-            real_time = (_time.perf_counter() - t0) * 1000
-            # Anchor to ~80ms constant-ish
-            vals.append(real_time + 82.0 + float(rng.normal(0, 1.5)))
-        ref35_runs.append(np.array(vals))
-    ref35_mean, ref35_std = summarize_runs(ref35_runs)
-
-    # ── Ref[36]: MLWE encrypt (quadratic-like) ──
-    pk36, sk36 = mlwe_pke.keygen()
-    ref36_runs: List[np.ndarray] = []
-    for _ in range(reps):
-        vals = []
-        for n_attr in attrs:
-            t0 = _time.perf_counter()
-            mlwe_pke.encrypt(pk36, payload)
-            real_time = (_time.perf_counter() - t0) * 1000
-            # Grows fastest: quadratic penalty
-            vals.append(real_time + 24.0 + 1.05 * n_attr + 0.058 * (n_attr ** 2) + float(rng.normal(0, 2.0)))
-        ref36_runs.append(np.array(vals))
-    ref36_mean, ref36_std = summarize_runs(ref36_runs)
-
-    data = {"Ref[4]": ref4_mean, "Ref[35]": ref35_mean,
-            "Ref[36]": ref36_mean, "Spider++ (Ours)": ours_mean}
+    data = {"Ref[4]": ref4_mean, "Spider++ (Ours)": ours_mean}
     save_csv(RAW_DIR / "graph3_cpabe_encryption.csv",
              "Number of Attributes", attrs, data)
     plot_lines(
         attrs,
         {"Ref[4]": (ref4_mean, ref4_std),
-         "Ref[35]": (ref35_mean, ref35_std),
-         "Ref[36]": (ref36_mean, ref36_std),
          "Spider++ (Ours)": (ours_mean, ours_std)},
         "Graph 3: CP-ABE Encryption Cost (Fog)",
         "Number of Attributes",
@@ -606,30 +664,37 @@ def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 3) -> Dict[str
     return data
 
 
-def graph4_cpabe_decryption(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.ndarray]:
+def graph4_cpabe_decryption(rng: np.random.Generator, reps: int = 8) -> Dict[str, np.ndarray]:
     """
     Graph 4: CP-ABE Decryption Cost vs Number of Attributes.
-    - Ours: Real CP-ABE decrypt (policy eval + key recovery)
-    - Ref[4]: Real CP-ABE decrypt (similar to Ours, moderate difference)
-    - Ref[35]: Anchored to ~28ms base, moderately increasing
-    - Ref[36]: Anchored to ~9ms base, moderately increasing
+
+    Both papers perform Lattice CP-ABE decryption at the user.
+    The difference is the caching model:
+
+    Ref[4] (Poomekum et al.): No batch awareness.
+      - Per PACKET: full policy_eval (LSSS weight computation) + decrypt
+      - No caching of LSSS reconstruction weights between packets
+
+    Spider++ (Ours): Batch-aware with cached policy_eval.
+      - First packet: full policy_eval + cpabe_decrypt
+      - Subsequent packets in batch: reuse cached LSSS weights
+      - Only cpabe_decrypt per additional packet
+      → Amortized cost decreases with batch size
     """
     from crypto_primitives.cp_abe import LatticeCPABE
-    from crypto_primitives.kyber import SecureKyber
-    from crypto_primitives.aes_gcm import SecureAESGCM
-    from crypto_primitives import mlwe_pke
 
     attrs = np.arange(5, 55, 5)
-    payload = os.urandom(256)
+    N_BATCH = 20
 
     ours_runs: List[np.ndarray] = []
     ref4_runs: List[np.ndarray] = []
-    
+
     for _ in range(reps):
         o_vals = []
         r_vals = []
         for n_attr in attrs:
-            universe = [f"Attr{i}" for i in range(int(n_attr))]
+            n_attr_int = int(n_attr)
+            universe = [f"Attr{i}" for i in range(n_attr_int)]
             user_attrs = universe
             aa = LatticeCPABE(n=256, q=3329)
             aa.setup()
@@ -637,72 +702,51 @@ def graph4_cpabe_decryption(rng: np.random.Generator, reps: int = 3) -> Dict[str
                 aa.hash_attribute(a)
             sk_u = aa.keygen({}, user_attrs)
             policy = {"type": "AND", "attributes": user_attrs}
-            policy_pkg = aa.ree_build_policy(policy)
-            k_aes = os.urandom(32)
-            tee_out = aa.tee_partial_encrypt(k_aes, policy_pkg)
-            ct = aa.ree_finalize_ct(policy_pkg, tee_out)
-            
-            # Ours
-            t0 = _time.perf_counter()
-            pe = aa.policy_eval(ct, sk_u)
-            if pe is not None:
-                aa.cpabe_decrypt(ct, sk_u, pe)
-            real_time = (_time.perf_counter() - t0) * 1000
-            o_vals.append(real_time)
 
-            # Ref[4] (same operation, add slight realistic variation)
-            r_vals.append(real_time + float(rng.normal(1.2, 0.4)))
-            
+            # Encrypt N_BATCH ciphertexts with the same policy
+            policy_pkg = aa.ree_build_policy(policy)
+            cts = []
+            for _ in range(N_BATCH):
+                k_aes = os.urandom(32)
+                tee_out = aa.tee_partial_encrypt(k_aes, policy_pkg)
+                cts.append(aa.ree_finalize_ct(policy_pkg, tee_out))
+
+            # ── Ref[4]: Full decrypt per packet (no cached policy_eval) ──
+            ref4_times = []
+            for ct in cts:
+                t0 = _time.perf_counter()
+                pe = aa.policy_eval(ct, sk_u)
+                if pe is not None:
+                    aa.cpabe_decrypt(ct, sk_u, pe)
+                ref4_times.append((_time.perf_counter() - t0) * 1000)
+            r_vals.append(float(np.mean(ref4_times)))
+
+            # ── Ours: Cached policy_eval across batch ──
+            # First packet: full policy_eval + cpabe_decrypt
+            # Packets 2-N: reuse cached pe, only cpabe_decrypt
+            ours_times = []
+            cached_pe = None
+            for ct in cts:
+                t0 = _time.perf_counter()
+                if cached_pe is None:
+                    cached_pe = aa.policy_eval(ct, sk_u)
+                if cached_pe is not None:
+                    aa.cpabe_decrypt(ct, sk_u, cached_pe)
+                ours_times.append((_time.perf_counter() - t0) * 1000)
+            o_vals.append(float(np.mean(ours_times)))
+
         ours_runs.append(np.array(o_vals))
         ref4_runs.append(np.array(r_vals))
 
     ours_mean, ours_std = summarize_runs(ours_runs)
     ref4_mean, ref4_std = summarize_runs(ref4_runs)
 
-    # ── Ref[35]: Kyber decap + AES-GCM decrypt ──
-    kyber = SecureKyber()
-    pk, sk = kyber.keygen()
-    c_kem, k_kem = kyber.encap(pk)
-    aes = SecureAESGCM(key=k_kem)
-    ct_aes, nonce = aes.encrypt(payload, associated_data=None)
-    ref35_runs: List[np.ndarray] = []
-    for _ in range(reps):
-        vals = []
-        for n_attr in attrs:
-            t0 = _time.perf_counter()
-            k_dec = kyber.decap(c_kem, sk)
-            aes_d = SecureAESGCM(key=k_dec)
-            aes_d.decrypt(ct_aes, nonce, associated_data=None)
-            real_time = (_time.perf_counter() - t0) * 1000
-            # Anchor to ~28ms, moderate increase
-            vals.append(real_time + 26.0 + 0.4 * n_attr + float(rng.normal(0, 0.5)))
-        ref35_runs.append(np.array(vals))
-    ref35_mean, ref35_std = summarize_runs(ref35_runs)
-
-    # ── Ref[36]: MLWE decrypt ──
-    pk36, sk36 = mlwe_pke.keygen()
-    ct36 = mlwe_pke.encrypt(pk36, payload)
-    ref36_runs: List[np.ndarray] = []
-    for _ in range(reps):
-        vals = []
-        for n_attr in attrs:
-            t0 = _time.perf_counter()
-            mlwe_pke.decrypt(sk36, ct36, message_length=len(payload))
-            real_time = (_time.perf_counter() - t0) * 1000
-            # Anchor to ~9ms, moderate increase
-            vals.append(real_time + 7.0 + 0.3 * n_attr + float(rng.normal(0, 0.3)))
-        ref36_runs.append(np.array(vals))
-    ref36_mean, ref36_std = summarize_runs(ref36_runs)
-
-    data = {"Ref[4]": ref4_mean, "Ref[35]": ref35_mean,
-            "Ref[36]": ref36_mean, "Spider++ (Ours)": ours_mean}
+    data = {"Ref[4]": ref4_mean, "Spider++ (Ours)": ours_mean}
     save_csv(RAW_DIR / "graph4_cpabe_decryption.csv",
              "Number of Attributes", attrs, data)
     plot_lines(
         attrs,
         {"Ref[4]": (ref4_mean, ref4_std),
-         "Ref[35]": (ref35_mean, ref35_std),
-         "Ref[36]": (ref36_mean, ref36_std),
          "Spider++ (Ours)": (ours_mean, ours_std)},
         "Graph 4: CP-ABE Decryption Cost (User)",
         "Number of Attributes",
@@ -813,23 +857,27 @@ def generate_nodes(count: int, heterogeneous: bool, rng: np.random.Generator) ->
     nodes: List[FogNode] = []
     for node_id in range(count):
         if heterogeneous:
-            # Create a mix of perfectly balanced nodes and highly deceptive mismatched nodes.
-            # Baselines will see high average capacity on mismatched nodes and fall into a trap,
-            # while Spider++ will accurately calculate the split-queue bottleneck and avoid them.
-            node_type = int(rng.integers(0, 3))
+            # AUDIT FIX: Realistic heterogeneity with 2-5× TEE/REE mismatch.
+            # Real-world OP-TEE vs native Linux has perhaps 2-5× overhead.
+            # Previous code used 50-70× mismatches which are unrealistic.
+            node_type = int(rng.integers(0, 4))
             if node_type == 0:
                 # Fast balanced node
                 tee_rate = float(rng.uniform(2.5, 3.5))
                 ree_rate = float(rng.uniform(2.5, 3.5))
             elif node_type == 1:
-                # Deceptive: extremely fast TEE, painfully slow REE (high average, terrible bottleneck)
-                tee_rate = float(rng.uniform(6.0, 9.0))
-                ree_rate = float(rng.uniform(0.08, 0.15))
+                # TEE-heavy: faster TEE, slower REE (realistic 2-4× mismatch)
+                tee_rate = float(rng.uniform(2.5, 4.0))
+                ree_rate = float(rng.uniform(0.8, 1.5))
+            elif node_type == 2:
+                # REE-heavy: slower TEE, faster REE (realistic 2-4× mismatch)
+                tee_rate = float(rng.uniform(0.8, 1.5))
+                ree_rate = float(rng.uniform(2.5, 4.0))
             else:
-                # Deceptive: painfully slow TEE, extremely fast REE
-                tee_rate = float(rng.uniform(0.08, 0.15))
-                ree_rate = float(rng.uniform(6.0, 9.0))
-                
+                # Slow node: both sides constrained
+                tee_rate = float(rng.uniform(0.6, 1.2))
+                ree_rate = float(rng.uniform(0.6, 1.2))
+
             network = float(rng.uniform(5.5, 32.0))
             epc_total = float(rng.choice([96, 128, 192, 256, 384, 512]) + rng.normal(0, 8.0))
             trust = float(rng.uniform(0.82, 0.995))
@@ -875,34 +923,49 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
     """
 
     arrival = task.arrival_ms
-    # Baselines rely on an SDN controller or generic heartbeat that is slightly stale
-    # Spider++ master fog node gets immediate trusted telemetry from enclaves
-    telemetry_delay = max(0.0, rng.normal(8.0, 3.5))
+    # AUDIT FIX: All algorithms use the same telemetry delay model.
+    # All schedulers receive slightly stale information (realistic for
+    # any centralized or distributed controller collecting heartbeats).
+    telemetry_delay = max(0.0, rng.normal(5.0, 2.0))
 
     if algorithm == "Ref[22]":
         scores = [
-            # Naive load balancing: looks at average node availability
-            max(0.0, (n.tee_available_ms + n.ree_available_ms) / 2.0 - arrival + telemetry_delay) + rng.normal(0.0, 1.5)
+            # OLB: minimum-latency selection — network + processing estimate
+            n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - arrival + telemetry_delay) / max(0.1, n.tee_rate + n.ree_rate) + rng.normal(0.0, 1.5)
             for n in nodes
         ]
 
     elif algorithm == "Ref[37]":
-        scores = [
-            # SDN-aware: looks at network + average queue delay
-            1.20 * n.network_ms + 0.85 * max(0.0, (n.tee_available_ms + n.ree_available_ms) / 2.0 - arrival + telemetry_delay) + rng.normal(0.0, 1.5)
-            for n in nodes
-        ]
+        # SDN-GH (Paper [37], Eq 8): Binary offloading decision.
+        # For each node, compute t_local vs t_offload; pick best.
+        # local = default min-queue node; offload if t_off < t_local.
+        local_idx = int(np.argmin([
+            max(n.tee_available_ms, n.ree_available_ms) for n in nodes
+        ]))
+        t_local = max(0.0, max(nodes[local_idx].tee_available_ms, nodes[local_idx].ree_available_ms) - arrival + telemetry_delay)
+        scores = []
+        for i, n in enumerate(nodes):
+            if i == local_idx:
+                scores.append(t_local + rng.normal(0.0, 1.5))
+            else:
+                # t_offloading = 2 * network (round-trip) + remote processing
+                t_off = 2.0 * n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - arrival + telemetry_delay)
+                scores.append(t_off + rng.normal(0.0, 1.5))
 
     elif algorithm == "Ref[39]":
-        scores = [
-            # Resource-aware: looks at average processing capability but ignores pipeline stall
-            max(0.0, (n.tee_available_ms + n.ree_available_ms) / 2.0 - arrival + telemetry_delay)
-            + (task.total_work / (0.5 * (n.tee_rate + n.ree_rate)))
-            + 0.65 * n.network_ms
-            + 2.5 * n.energy_factor
-            + rng.normal(0.0, 1.5)
-            for n in nodes
-        ]
+        # DIST (Paper [39]): Reward-based selection considering latency,
+        # energy, and reliability (trust).  Uses deadline-miss penalty.
+        scores = []
+        for n in nodes:
+            bottleneck = max(0.0, max(n.tee_available_ms, n.ree_available_ms) - arrival + telemetry_delay)
+            proc_est = task.total_work / max(0.1, min(n.tee_rate, n.ree_rate))
+            # Energy: proportional to load * energy_factor
+            energy_cost = 0.8 * n.energy_factor * (n.assigned_count + 1)
+            # Reliability: trust penalty (paper: w_rel * (1 - Trust))
+            reliability_penalty = 3.0 * (1.0 - n.trust)
+            scores.append(bottleneck + proc_est + 0.65 * n.network_ms
+                          + energy_cost + reliability_penalty
+                          + rng.normal(0.0, 1.5))
 
     elif algorithm == "Spider++ (Ours)":
         scores = []
@@ -1029,14 +1092,20 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
     Fair recovery simulation.  Per-task costs derived from measured values:
       - Full reprocess ≈ Phase 2 enc (~1.6ms) + Phase 5 fog (~44ms) ≈ 45ms
       - Retry from checkpoint ≈ fog re-execution only ≈ 15ms
-      - Spider++ delegation ≈ Dilithium verify (~3ms) + state transfer ≈ 6ms
+      - Spider++ delegation ≈ Dilithium verify (~6.2ms) + state transfer (~3ms) ≈ 9ms
+        AUDIT FIX: Previous value of 6ms was incorrect — measured Dilithium
+        verify alone takes ~6.2ms on this hardware.
     All methods share the same detection latency and noise level.
     """
     rng = np.random.default_rng(seed)
     cluster_nodes = 20
-    inflight = int(rng.integers(450, 620))
+    
+    # Inflight tasks must be constant across failure rates to prevent
+    # non-monotonic bouncing in the graph due to RNG variance.
+    inflight = 500 
+    
     failed = max(1, int(round(cluster_nodes * failure_rate / 100.0)))
-    affected = inflight * (failed / cluster_nodes) * float(rng.normal(1.0, 0.08))
+    affected = inflight * (failed / cluster_nodes)
 
     # Detection latency: same for all methods (heartbeat timeout)
     detection = float(rng.normal(10.0, 2.0))
@@ -1052,9 +1121,9 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
         per_task = float(rng.normal(15, 3))
         overhead = float(rng.normal(20, 5))
         recovery = detection + overhead + per_task * (affected / max(1, cluster_nodes - failed))
-    elif method == "Spider++ Secure Task Delegation (Ours)":
-        # Pre-computed delegation certificates: state transfer + sig verify
-        per_task = float(rng.normal(6, 1.5))
+    elif method == "Spider++ (Ours)":
+        # AUDIT FIX: Dilithium verify (~6.2ms measured) + state transfer (~3ms) ≈ 9ms
+        per_task = float(rng.normal(9, 2))
         overhead = float(rng.normal(15, 3))
         recovery = detection + overhead + per_task * (affected / max(1, cluster_nodes - failed))
     else:
@@ -1070,7 +1139,7 @@ def graph8_recovery(rng: np.random.Generator, reps: int = 5) -> Dict[str, np.nda
     methods = [
         "No Delegation",
         "Simple Retry / Reassignment",
-        "Spider++ Secure Task Delegation (Ours)",
+        "Spider++ (Ours)",
     ]
 
     mean_series: Dict[str, np.ndarray] = {}
@@ -1133,8 +1202,13 @@ def run_all_graphs() -> None:
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
     print("  ✓ Graph 5 generated")
 
-    graph_load_balancing(rng, graph_no=6, heterogeneous=True)
-    print("  ✓ Graph 6 generated")
+    try:
+        from graph_heterogeneous_fog import plot_heterogeneous_fog_graph
+        plot_heterogeneous_fog_graph()
+        print("  ✓ Graph 6 generated")
+    except ImportError:
+        print("  ! Graph 6 generation failed: graph_heterogeneous_fog module not found")
+        pass
 
     print("  - Graph 7 skipped by requirement")
 
