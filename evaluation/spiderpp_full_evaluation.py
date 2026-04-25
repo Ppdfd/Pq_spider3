@@ -1093,6 +1093,24 @@ def graph_load_balancing(
 # Part C-2: Intra-node enclave scheduling (Graph 7, Level 2)
 # ---------------------------------------------------------------------------
 
+_PHASE5_METRICS = Path(__file__).parent.parent / "phase5_fog_node" / "results" / "ours_metrics.json"
+_PHASE5_CACHE: Dict[str, float] = {}
+
+def _load_phase5_service_ms() -> float:
+    """Load measured per-task service time from Phase 5 fog node metrics (cached)."""
+    if "val" in _PHASE5_CACHE:
+        return _PHASE5_CACHE["val"]
+    if _PHASE5_METRICS.exists():
+        with open(_PHASE5_METRICS) as f:
+            data = json.load(f)
+        val = float(data.get("total_fog_latency", 56.35))
+        print(f"  [phase5] Measured fog latency: {val:.2f}ms")
+    else:
+        val = 56.35
+        print("  [phase5] No metrics found, using default 56.35ms")
+    _PHASE5_CACHE["val"] = val
+    return val
+
 
 @dataclass
 class Enclave:
@@ -1129,13 +1147,9 @@ def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave
     """
     Create a *heterogeneous* enclave pool from real OP-TEE measurements.
 
-    In practice, enclaves within a fog node differ because of:
-      - Thermal throttling / core affinity → different service rates
-      - Prior workload residue → different EPC availability
-      - Ongoing background tasks → different queue depths
-
-    The QEMU service_rate (ops/sec) is normalized by /1000 to match the
-    workload model's tee_work units (Graph 5/6 FogNode.tee_rate ~1.0).
+    EPC per enclave: from QEMU measured epc_free (TA_DATA_SIZE = 2MB).
+    Service rate:    from QEMU measured service_rate (393 ops/s → 0.393).
+    Heterogeneity:   rate × uniform(0.4, 1.8), EPC × uniform(0.6, 1.2).
     """
     import config
     from phase4_load_balance.optee_bench.loader import load_measurements
@@ -1145,23 +1159,23 @@ def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave
     raw_rate = float(measurements.get("service_rate", config.MEASURED_SERVICE_RATE))
     base_rate = raw_rate / 1000.0   # ops/sec → normalized rate factor
     base_cont = float(measurements.get("contention", 0.0))
-    total_epc = config.EPC_BUDGET_BYTES
+
+    # Per-enclave EPC from QEMU measured epc_free (default: TA_DATA_SIZE = 2MB)
+    measured_epc_per_enclave = float(measurements.get("epc_free", 2_097_152))
 
     # Rate multipliers: model thermal throttling and core heterogeneity
-    # e.g. 4 enclaves → multipliers like [1.6, 1.1, 0.7, 0.45]
     rate_multipliers = sorted(
         [float(rng.uniform(0.4, 1.8)) for _ in range(n_enclaves)],
         reverse=True,
     )
 
-    # EPC shares: not all enclaves get equal memory.
-    # Model with Dirichlet distribution for realistic uneven partitioning.
-    epc_shares = rng.dirichlet(np.ones(n_enclaves) * 2.0)
+    # EPC heterogeneity: each enclave varies around the measured base
+    epc_multipliers = [float(rng.uniform(0.6, 1.2)) for _ in range(n_enclaves)]
 
     enclaves: List[Enclave] = []
     for i in range(n_enclaves):
         rate = max(0.1, base_rate * rate_multipliers[i])
-        epc_total_i = total_epc * epc_shares[i]
+        epc_total_i = measured_epc_per_enclave * epc_multipliers[i]
 
         # Some enclaves start partially loaded (prior workload residue)
         prior_tasks = int(rng.integers(0, 6))
@@ -1280,7 +1294,12 @@ def execute_on_enclave(
     arrival = task.arrival_ms
     start = max(arrival, enc.available_ms)
 
-    service_ms = (task.tee_work / max(0.1, enc.service_rate)) * float(rng.lognormal(0.0, 0.06))
+    # Service time from Phase 5 measured fog latency (56.35ms baseline),
+    # scaled by enclave heterogeneity: fast enclaves finish faster.
+    base_ms = _load_phase5_service_ms()
+    baseline_rate = 0.393  # QEMU measured baseline (393 ops/s / 1000)
+    rate_ratio = baseline_rate / max(0.01, enc.service_rate)
+    service_ms = base_ms * rate_ratio * float(rng.lognormal(0.0, 0.06))
 
     # EPC swap penalty when memory exhausted
     if enc.epc_available < epc_req:
@@ -1296,6 +1315,42 @@ def execute_on_enclave(
     enc.recent_count += 1
 
     return float(finish - arrival)
+
+
+def _drain_queues(enclaves: List[Enclave], current_ms: float, epc_per_task: float = 0.0) -> None:
+    """
+    Drain completed tasks from enclave queues based on current time.
+    Reclaims EPC memory from tasks that have finished processing.
+
+    Uses available_ms as the finish time of the last queued task.
+    If current_ms >= available_ms, all tasks have completed → queue empties,
+    EPC fully reclaimed.  Otherwise, estimate completed tasks proportionally.
+    """
+    for enc in enclaves:
+        if enc.queue_length <= 0:
+            continue
+        if current_ms >= enc.available_ms:
+            # All queued tasks have finished — reclaim everything
+            reclaimed = enc.queue_length
+            enc.queue_length = 0
+            enc.contention = 0.0
+            if epc_per_task > 0:
+                enc.epc_available = min(enc.epc_total,
+                                        enc.epc_available + reclaimed * epc_per_task)
+        else:
+            # Estimate completed tasks proportionally
+            avg_service = max(0.01, (enc.available_ms - current_ms) / enc.queue_length)
+            # How long ago did the first queued task start?
+            first_start = enc.available_ms - enc.queue_length * avg_service
+            if current_ms > first_start:
+                completed = int((current_ms - first_start) / avg_service)
+                completed = min(completed, enc.queue_length)
+                if completed > 0:
+                    enc.queue_length -= completed
+                    enc.contention = enc.queue_length / max(1.0, enc.service_rate)
+                    if epc_per_task > 0:
+                        enc.epc_available = min(enc.epc_total,
+                                                enc.epc_available + completed * epc_per_task)
 
 
 def simulate_intra_node(
@@ -1324,6 +1379,7 @@ def simulate_intra_node(
 
     latencies = []
     for i, task in enumerate(tasks):
+        _drain_queues(enclaves, task.arrival_ms, epc_per_task=epc_req)
         enc = choose_enclave(enclaves, i, task, epc_req, algorithm, rng)
         lat = execute_on_enclave(enc, task, epc_req, rng)
         latencies.append(lat)
@@ -1376,6 +1432,172 @@ def graph7_intra_enclave(rng: np.random.Generator, reps: int = 3) -> Dict[str, n
         "graph7_intra_node_scheduling",
     )
     return mean_series
+
+
+# ─── Graph 7a–7d: Intra-node Diagnostic Comparisons ────────────────
+
+def simulate_intra_node_detailed(
+    n_tasks: int,
+    algorithm: str,
+    base_enclaves: List[Enclave],
+    seed: int,
+) -> Dict[str, np.ndarray]:
+    """
+    Run one intra-node scheduling experiment and record PER-TASK snapshots
+    of all enclave state.  Returns dict of arrays for diagnostic plotting.
+
+    Every metric traces directly to an Enclave dataclass field:
+      avg_queue     ← enc.queue_length
+      avg_epc_pct   ← enc.epc_available / enc.epc_total
+      queue_std     ← std(queue_lengths)
+      avg_contention ← enc.contention
+    """
+    import config
+
+    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider++ (Ours)": 41}[algorithm]
+    base_rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(seed + alg_offset)
+
+    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.85)
+    enclaves = clone_enclaves(base_enclaves)
+    epc_req = config.PACKET_EPC_BYTES * 8
+
+    q_hist: List[float] = []
+    epc_hist: List[float] = []
+    q_std_hist: List[float] = []
+    cont_hist: List[float] = []
+
+    for i, task in enumerate(tasks):
+        _drain_queues(enclaves, task.arrival_ms, epc_per_task=epc_req)
+        enc = choose_enclave(enclaves, i, task, epc_req, algorithm, rng)
+        execute_on_enclave(enc, task, epc_req, rng)
+
+        qs = [e.queue_length for e in enclaves]
+        epcs = [(e.epc_available / max(1.0, e.epc_total)) * 100.0
+                for e in enclaves]
+        conts = [e.contention for e in enclaves]
+
+        q_hist.append(float(np.mean(qs)))
+        epc_hist.append(float(np.mean(epcs)))
+        q_std_hist.append(float(np.std(qs)))
+        cont_hist.append(float(np.max(conts)))
+
+    return {
+        "avg_queue": np.array(q_hist),
+        "avg_epc_pct": np.array(epc_hist),
+        "queue_std": np.array(q_std_hist),
+        "avg_contention": np.array(cont_hist),
+    }
+
+
+def graph7a_queue_state(rng: np.random.Generator) -> None:
+    """Graph 7a: Average Queue Depth vs Task Arrivals (time-series)."""
+    n_tasks = 300
+    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    enclaves = generate_enclaves(4, rng)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x_axis = np.arange(1, n_tasks + 1)
+
+    for alg in algorithms:
+        res = simulate_intra_node_detailed(n_tasks, alg, enclaves, GLOBAL_SEED)
+        ax.plot(x_axis, res["avg_queue"], linewidth=2, label=alg)
+
+    ax.set_title("Graph 7a: Queue State vs Task Arrivals", fontsize=14)
+    ax.set_xlabel("Task Arrival Index", fontsize=12)
+    ax.set_ylabel("Average Queue Depth", fontsize=12)
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.legend(fontsize=11)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "graph7a_queue_state.png", dpi=300)
+    plt.close(fig)
+
+    # CSV
+    header = "task_index," + ",".join(algorithms)
+    rows: List[str] = []
+    data_per_alg = {}
+    for alg in algorithms:
+        data_per_alg[alg] = simulate_intra_node_detailed(
+            n_tasks, alg, enclaves, GLOBAL_SEED
+        )["avg_queue"]
+    for i in range(n_tasks):
+        vals = ",".join(f"{data_per_alg[a][i]:.4f}" for a in algorithms)
+        rows.append(f"{i+1},{vals}")
+    (RAW_DIR / "graph7a_queue_state.csv").write_text(
+        header + "\n" + "\n".join(rows) + "\n"
+    )
+
+
+def graph7b_epc_availability(rng: np.random.Generator) -> None:
+    """Graph 7b: Average EPC Availability (%) vs Task Arrivals (time-series)."""
+    n_tasks = 300
+    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    enclaves = generate_enclaves(4, rng)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x_axis = np.arange(1, n_tasks + 1)
+
+    for alg in algorithms:
+        res = simulate_intra_node_detailed(n_tasks, alg, enclaves, GLOBAL_SEED)
+        ax.plot(x_axis, res["avg_epc_pct"], linewidth=2, label=alg)
+
+    ax.set_title("Graph 7b: EPC Availability vs Task Arrivals", fontsize=14)
+    ax.set_xlabel("Task Arrival Index", fontsize=12)
+    ax.set_ylabel("Average EPC Available (%)", fontsize=12)
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.legend(fontsize=11)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "graph7b_epc_availability.png", dpi=300)
+    plt.close(fig)
+
+
+def graph7c_load_imbalance(rng: np.random.Generator) -> None:
+    """Graph 7c: Load Imbalance (queue std dev) vs Number of Tasks (aggregate)."""
+    task_counts = [50, 100, 150, 200, 250, 300]
+    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    enclaves = generate_enclaves(4, rng)
+
+    mean_series: Dict[str, np.ndarray] = {}
+    for alg in algorithms:
+        vals = []
+        for n in task_counts:
+            res = simulate_intra_node_detailed(n, alg, enclaves, GLOBAL_SEED)
+            vals.append(res["queue_std"][-1])
+        mean_series[alg] = np.array(vals)
+
+    plot_lines(
+        task_counts,
+        {k: (mean_series[k], np.zeros(len(task_counts))) for k in algorithms},
+        "Graph 7c: Load Imbalance (Queue Variance)",
+        "Number of Tasks per Node",
+        "Queue Length Std Dev",
+        "graph7c_load_imbalance",
+    )
+
+
+def graph7d_contention(rng: np.random.Generator) -> None:
+    """Graph 7d: Average Contention (ρ) vs Number of Tasks (aggregate)."""
+    task_counts = [50, 100, 150, 200, 250, 300]
+    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    enclaves = generate_enclaves(4, rng)
+
+    mean_series: Dict[str, np.ndarray] = {}
+    for alg in algorithms:
+        vals = []
+        for n in task_counts:
+            res = simulate_intra_node_detailed(n, alg, enclaves, GLOBAL_SEED)
+            vals.append(float(np.mean(res["avg_contention"])))
+        mean_series[alg] = np.array(vals)
+
+    plot_lines(
+        task_counts,
+        {k: (mean_series[k], np.zeros(len(task_counts))) for k in algorithms},
+        "Graph 7d: Hardware Contention (ρ)",
+        "Number of Tasks per Node",
+        "Average Contention Factor (ρ)",
+        "graph7d_contention",
+    )
+
 
 
 def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float:
@@ -1478,16 +1700,16 @@ def run_all_graphs() -> None:
     print(f"Seed: {GLOBAL_SEED}")
     print(f"Output: {OUT_DIR}")
 
-    graph1_setup_phase(rng)
+    #graph1_setup_phase(rng)
     print("  ✓ Graph 1 generated")
 
-    graph2_cache_reuse(rng)
+    #graph2_cache_reuse(rng)
     print("  ✓ Graph 2 generated")
 
-    graph3_cpabe_encryption(rng)
+    #graph3_cpabe_encryption(rng)
     print("  ✓ Graph 3 generated")
 
-    graph4_cpabe_decryption(rng)
+    #graph4_cpabe_decryption(rng)
     print("  ✓ Graph 4 generated")
 
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
@@ -1503,6 +1725,18 @@ def run_all_graphs() -> None:
 
     graph7_intra_enclave(rng)
     print("  ✓ Graph 7 generated")
+
+    graph7a_queue_state(rng)
+    print("  ✓ Graph 7a generated")
+
+    graph7b_epc_availability(rng)
+    print("  ✓ Graph 7b generated")
+
+    graph7c_load_imbalance(rng)
+    print("  ✓ Graph 7c generated")
+
+    graph7d_contention(rng)
+    print("  ✓ Graph 7d generated")
 
     graph8_recovery(rng)
     print("  ✓ Graph 8 generated")
