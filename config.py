@@ -130,6 +130,5 @@ GRAPH_TEST_ROUNDS = 5
 # ---------------------------------------------------------
 # 6. SPIDER++ FULL PAPER EVALUATION GRAPHS
 # ---------------------------------------------------------
-# Generates Graph 1, 2, 3, 4, 5, 6, and 8 for the paper-style
-# simulation requested for Spider++. Graph 7 is intentionally skipped.
+# Generates Graph 1-8 for the paper-style simulation.
 GENERATE_SPIDERPP_FULL_EVALUATION = True
