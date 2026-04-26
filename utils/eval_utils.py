@@ -232,10 +232,7 @@ def plot_lines(
         marker = style["marker"]
         color = style["color"]
         line = ax.plot(x, mean, marker=marker, color=color, label=label)[0]
-        if std is not None:
-            lower = np.maximum(mean - std, 0.0)
-            upper = mean + std
-            ax.fill_between(x, lower, upper, color=line.get_color(), alpha=PLOT.band_alpha, linewidth=0)
+        # Confidence bands removed intentionally as requested by the user
 
     ax.set_title(title)
     ax.set_xlabel(xlabel)
