@@ -811,7 +811,7 @@ def simulate_intra_node_detailed(
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
-    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.4)
+    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.95)
     enclaves = clone_enclaves(base_enclaves)
     epc_req = config.PACKET_EPC_BYTES * 28
 
