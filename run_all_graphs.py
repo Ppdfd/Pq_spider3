@@ -17,6 +17,7 @@ from phase4_load_balance.graph7 import (
     graph7a_queue_state, graph7b_epc_availability,
     graph7c_load_imbalance, graph7f_deadline, graph7g_cache_reuse,
     graph7d_contention, graph7e_sensitivity,
+    graph7h_enclave_scaling,
 )
 from phase5_fog_node.graph8 import graph8_recovery
 
@@ -71,6 +72,8 @@ def run_all_graphs():
     print("  ✓ Graph 7d generated (heterogeneity sweep)")
     graph7e_sensitivity(rng)
     print("  ✓ Graph 7e generated (sensitivity analysis)")
+    graph7h_enclave_scaling(rng)
+    print("  ✓ Graph 7h generated (enclave scaling)")
 
     graph8_recovery(rng)
     print("  ✓ Graph 8 generated (phase5)")
