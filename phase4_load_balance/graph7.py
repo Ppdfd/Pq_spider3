@@ -743,7 +743,7 @@ def simulate_intra_node(
     return float(arr[(arr >= lo) & (arr <= hi)].mean())
 
 
-def graph7_intra_enclave(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.ndarray]:
+def graph7_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, np.ndarray]:
     """
     Graph 7: Intra-node Multi-Enclave Scheduling (Level 2).
 
@@ -1281,7 +1281,7 @@ def graph7e_sensitivity(rng: np.random.Generator) -> None:
     )
 
 
-def graph7h_enclave_scaling(rng: np.random.Generator, reps: int = 5) -> None:
+def graph7h_enclave_scaling(rng: np.random.Generator, reps: int = 10) -> None:
     """Graph 7h: Enclave Scaling — 2-panel (Latency + EPC Violations).
 
     Sweeps the number of enclaves per fog node from 2 to 12 and shows:
