@@ -283,10 +283,9 @@ def main():
         print("#" * 70 + "\n")
 
         # Generate the complete paper-style Spider++ evaluation graph set:
-        # Graph 1, 2, 3, 4, 5, 6, and 8. Graph 7 is intentionally skipped.
         if getattr(config, "GENERATE_SPIDERPP_FULL_EVALUATION", True):
             try:
-                from evaluation.spiderpp_full_evaluation import run_all_graphs as run_spiderpp_full_graphs
+                from run_all_graphs import run_all_graphs as run_spiderpp_full_graphs
                 run_spiderpp_full_graphs()
             except Exception as exc:
                 print(f"[WARN] Spider++ full evaluation graph generation failed: {exc}")

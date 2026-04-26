@@ -70,67 +70,7 @@ def main():
     print("=" * 78)
     print()
 
-    if config.GENERATE_GRAPHS:
-        plot_graphs()
 
-
-def plot_graphs():
-    """
-    Phase 6 graph. AUDIT FIX preserved:
-    - Ref[36] chain includes Phase 5
-    - No O(1) Batch tag on Ours label
-    - Structural asymmetry caption (batch vs per-packet)
-    """
-    from utils.benchmark_runner import run_benchmark_chain, plot_ieee_line
-
-    results_dir = Path(__file__).parent / "results"
-    attr_counts = config.GRAPH_ATTR_COUNTS
-    warmup = config.GRAPH_WARMUP_ROUNDS
-    rounds = config.GRAPH_TEST_ROUNDS
-
-    print("\n  Generating Phase 6: User Decryption vs Attributes...")
-    results = {"Ours": [], "Ref [4]": [], "Ref [35]": [], "Ref [36]": []}
-    orig_univ = config.CP_ABE_UNIVERSE
-    orig_user = config.USER_ATTRIBUTES
-    extract_user = lambda m: m["total_user_latency"]
-
-    # AUDIT FIX: Ref[36] chain now includes phase5 (was missing in original)
-    chains = {
-        "Ours":     [run_phase1_simulation, run_phase2_simulation,
-                     run_phase3_simulation, run_phase5_simulation,
-                     run_phase6_simulation],
-        "Ref [4]":  [run_phase1_ref4, run_phase2_ref4,
-                     run_phase5_ref4, run_phase6_ref4],
-        "Ref [35]": [run_phase1_ref35, run_phase2_ref35,
-                     run_phase5_ref35, run_phase6_ref35],
-        "Ref [36]": [run_phase1_ref36, run_phase2_ref36,
-                     run_phase5_ref36, run_phase6_ref36],
-    }
-
-    try:
-        for count in attr_counts:
-            config.CP_ABE_UNIVERSE = [f"A{i}" for i in range(count)]
-            config.USER_ATTRIBUTES = config.CP_ABE_UNIVERSE[:max(1, count // 2)]
-            for name, chain in chains.items():
-                avg = run_benchmark_chain(chain, rounds, warmup, extract_user)
-                results[name].append(avg)
-    finally:
-        config.CP_ABE_UNIVERSE = orig_univ
-        config.USER_ATTRIBUTES = orig_user
-
-    # AUDIT FIX: no "(O(1) Batch)" on Ours label; structural asymmetry caption
-    plot_ieee_line(
-        attr_counts, results,
-        xlabel='Number of Attributes',
-        ylabel='User Decryption Latency (ms)',
-        title='Phase 6: User Decryption vs Attribute Depth',
-        output_path=results_dir / "phase6_attr_latency.png",
-        caption="Structural note: Ours does ONE batch-level decrypt (fog-side "
-                "aggregation in Phase 5).\nRefs do per-packet decrypt × N packets.  "
-                "The attribute axis only applies to Ours and Ref [4];\nit is shown "
-                "for Refs [35]/[36] to expose the scale-invariance of their designs.",
-    )
-    print("  Phase 6 graphs complete.\n")
 
 
 if __name__ == "__main__":
