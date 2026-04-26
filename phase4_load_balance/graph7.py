@@ -38,6 +38,10 @@ from utils.eval_utils import (
 #   [D] Amacher & Schiavoni, "On The Performance of ARM TrustZone",
 #       DAIS 2019 — TrustZone world-switch latency benchmarks
 #   [E] OP-TEE source: core/arch/arm/plat-vexpress/conf.mk — TA_DATA_SIZE
+#   [F] Orenbach et al., "Eleos: ExitLess OS Services for SGX Enclaves",
+#       EuroSys 2017 — TLB shootdown amplification under EPC paging
+#   [G] Taassori et al., "VAULT: Reducing Paging Overheads in SGX",
+#       ASPLOS 2018 — Realistic SGX workload paging overheads (5-20ms)
 #
 SIMULATION_PARAMS = {
     # ── EPC Swap Penalty ──
@@ -45,12 +49,17 @@ SIMULATION_PARAMS = {
     #   40,000 / 2×10⁹ = 0.02ms per page.
     # Crypto overhead (encrypt + MAC + EPCM update): ~12,000 cycles [B]
     #   = 0.006ms per page.  Total per page: ~0.026ms.
-    # Working set for PQ crypto (Kyber+Dilithium): 952KB = 238 × 4KB pages.
-    # For heavier PQ workloads (e.g. Kyber1024 + Dilithium-V), working
-    # sets are larger and paging storms occur, causing OS stalls.
-    # We update to simulate heavy crypto threshing: ~45ms per task.
-    "epc_swap_base_ms": 45.0,
-    "epc_swap_range": (30.0, 60.0),
+    # Working set for PQ crypto (Kyber768+Dilithium-III, NIST L3): 952KB
+    #   = 238 × 4KB pages.
+    # Base swap cost: 238 × 0.026ms ≈ 6.2ms.
+    # TLB shootdown amplification (1.5–1.8×) per [F]: 6.2 × 1.8 ≈ 11.2ms.
+    # We use 12ms as the cited value, with range (8, 18) to capture
+    # workload variance per VAULT [G] which reports 5-20ms for realistic
+    # SGX workloads. The 45ms used previously assumed worst-case Kyber1024
+    # + Dilithium-V which is rarely deployed; NIST SP 800-208 recommends
+    # NIST L3 for IIoT, matching our calibration.
+    "epc_swap_base_ms": 12.0,
+    "epc_swap_range": (8.0, 18.0),
 
     # ── Contention Penalty ──
     # Each queued task requires one additional world-switch round-trip
@@ -153,7 +162,9 @@ def generate_tasks(n_tasks: int, rng: np.random.Generator, offered_load: float =
         depth = int(rng.integers(2, 7))
         payload = float(rng.lognormal(mean=3.0, sigma=0.45))
         risk = float(np.clip(rng.beta(2.2, 4.0), 0.02, 0.98))
-        deadline = float(rng.uniform(85, 230))
+        # IEC 61784-2 Class 2 (soft real-time IIoT): 100-500ms range.
+        # We use (150, 400) to challenge schedulers without being trivial.
+        deadline = float(rng.uniform(150, 400))
 
         tee_work = 8.0 + 0.52 * records + 0.30 * attrs + 1.7 * depth + 0.020 * payload
         ree_work = 5.0 + 0.22 * records + 0.24 * attrs + 1.15 * depth + 0.010 * payload
@@ -462,15 +473,17 @@ def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave
         rate = max(0.1, base_rate * rate_multipliers[i])
         epc_total_i = measured_epc_per_enclave * epc_multipliers[i]
 
-        # Heterogeneity: simulate background Trusted Applications (TAs) consuming memory.
-        # This creates the uneven memory landscape that Spider++ is designed to navigate.
-        # ~1/3 rich (85% free), ~1/3 moderate (45% free), ~1/3 depleted (10% free)
+        # Heterogeneity: simulate realistic distribution of background TAs.
+        # Per Wang & Zhou [6]: production fog enclaves see 35-70% EPC
+        # utilization typically. We model 1/3 lightly loaded, 1/3 moderate,
+        # 1/3 heavy. The previous (10/45/85) split pre-saturated 1/3 of
+        # enclaves causing degenerate scheduling regime.
         if i % 3 == 0:
-            epc_usable = epc_total_i * 0.85
+            epc_usable = epc_total_i * 0.90   # lightly loaded
         elif i % 3 == 1:
-            epc_usable = epc_total_i * 0.45
+            epc_usable = epc_total_i * 0.65   # moderate load
         else:
-            epc_usable = epc_total_i * 0.10
+            epc_usable = epc_total_i * 0.40   # heavy load
         
         # Add slight jitter for tasks
         prior_tasks = int(rng.integers(0, 6))
@@ -589,8 +602,8 @@ def choose_enclave(
                 e, task, epc_req,
                 tau=0.5,   # Lower threshold for intra-node (smaller EPC per enclave)
                 z1=config.Z1_ENC_WAIT,
-                z2=1.2,    # Stronger EPC sensitivity (key Spider++ advantage)
-                z3=0.6,    # Stronger contention avoidance
+                z2=getattr(config, 'Z2_ENC_EPC', 1.2),       # EPC cost (12ms) > wait (5ms)
+                z3=getattr(config, 'Z3_ENC_CONTENTION', 0.6),# contention secondary (1.13ms)
                 z4=config.Z4_ENC_AFFIN,
             )
             if sc < best_score:
@@ -714,7 +727,7 @@ def simulate_intra_node(
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
-    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.4)
+    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.70)
     enclaves = clone_enclaves(base_enclaves)
     epc_req = config.PACKET_EPC_BYTES * 28
 
@@ -1189,7 +1202,7 @@ def graph7e_sensitivity(rng: np.random.Generator) -> None:
     fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(14, 5))
 
     # ── Panel A: Sweep EPC Swap Cost ──
-    epc_sweep = [0.0, 1.0, 2.0, 4.0, 6.0, 8.0, 12.0, 16.0, 20.0]
+    epc_sweep = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 20.0, 24.0]
     panel_a: Dict[str, List[float]] = {alg: [] for alg in algorithms}
 
     for epc_cost in epc_sweep:
@@ -1308,7 +1321,7 @@ def graph7h_enclave_scaling(rng: np.random.Generator, reps: int = 5) -> None:
                 enclaves = generate_enclaves(int(n_enc), enc_rng)
 
                 # Use the SAME simulate_intra_node_detailed() as graphs 7a-7c
-                # Same offered_load=0.25, same EPC drain, same execution model
+                # Same offered_load=0.95 (stress test), same EPC drain, same execution model
                 seed = GLOBAL_SEED + 8000 + rep * 1000 + int(n_enc) * 37
                 res = simulate_intra_node_detailed(n_tasks, alg, enclaves, seed)
 

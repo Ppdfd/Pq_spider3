@@ -77,9 +77,10 @@ THETA2_KYBER   = 0.4     # Weight for cached Kyber precomputation (Eq 39)
 # Level 2: Intra-Node Enclave Score (Eq 46)
 # EnclaveScore = z1*Twait_enc + z2*Pepc_enc + z3*Pcont − z4*Affinity
 Z1_ENC_WAIT    = 1.0     # Enclave waiting time weight (Eq 42)
-Z2_ENC_EPC     = 0.5     # Enclave EPC pressure weight (Eq 43)
+Z2_ENC_EPC     = 1.2     # Enclave EPC pressure weight (Eq 43)
 Z3_ENC_CONT    = 0.3     # Contention penalty weight (Eq 44)
 Z4_ENC_AFFIN   = 0.2     # Affinity bonus weight (Eq 45)
+Z3_ENC_CONTENTION = 0.6
 
 # Batch Profiling (Eq 28-30)
 BETA1_SIZE     = 1.0     # Batch size factor
