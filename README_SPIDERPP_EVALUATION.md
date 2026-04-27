@@ -35,12 +35,19 @@ graphs/spiderpp_full_evaluation/
 ├── graph4_cpabe_decryption_user.png/.pdf
 ├── graph5_homogeneous_fog_nodes.png/.pdf
 ├── graph6_heterogeneous_fog_nodes.png/.pdf
-├── graph8_recovery_time_failure_rate.png/.pdf
+├── graph7_recovery_time_failure_rate.png/.pdf
+├── graph8_intra_node_scheduling.png/.pdf
+├── graph9_queue_state.png/.pdf
+├── graph10_contention.png/.pdf
+├── graph11_sensitivity.png/.pdf
+├── graph12_epc_availability.png/.pdf
+├── graph13_load_imbalance.png/.pdf
+├── graph14_deadline.png/.pdf
+├── graph15_cache_reuse.png/.pdf
+├── graph16_enclave_scaling.png/.pdf
 └── raw/
     └── CSV data for every graph
 ```
-
-Graph 7 is intentionally skipped because the requested experiment excludes intra-node multi-enclave scheduling.
 
 ## Fairness notes
 

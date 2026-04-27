@@ -11,15 +11,15 @@ from phase5_fog_node.graph3 import graph3_cpabe_encryption
 from phase6_user_decrypt.graph4 import graph4_cpabe_decryption
 from phase4_load_balance.graph5 import graph_load_balancing
 from phase4_load_balance.graph6 import graph6_heterogeneous_fog
-from phase4_load_balance.graph7 import (
-    graph7_intra_enclave,
-    run_graph7_experiment,
-    graph7a_queue_state, graph7b_epc_availability,
-    graph7c_load_imbalance, graph7f_deadline, graph7g_cache_reuse,
-    graph7d_contention, graph7e_sensitivity,
-    graph7h_enclave_scaling,
+from phase4_load_balance.graph8 import (
+    graph8_intra_enclave,
+    run_graph8_experiment,
+    graph9_queue_state, graph12_epc_availability,
+    graph13_load_imbalance, graph14_deadline, graph15_cache_reuse,
+    graph10_contention, graph11_sensitivity,
+    graph16_enclave_scaling,
 )
-from phase5_fog_node.graph8 import graph8_recovery
+from phase5_fog_node.graph7 import graph7_recovery
 
 def run_all_graphs():
     rng = set_global_seed(GLOBAL_SEED)
@@ -48,35 +48,35 @@ def run_all_graphs():
     graph6_heterogeneous_fog()
     print("  ✓ Graph 6 generated (phase4)")
 
-    # Graph 7: task-count sweep (runs its own simulations)
-    graph7_intra_enclave(rng)
-    print("  ✓ Graph 7 generated (phase4)")
+    graph7_recovery(rng)
+    print("  ✓ Graph 7 generated (phase5)")
 
-    # ── Single experiment for all diagnostic views (7a-7c, 7f, 7g) ──
-    results, enclaves = run_graph7_experiment(rng)
-    print("  ✓ Graph 7 experiment complete (1 run × 3 algorithms)")
+    # Graph 8: task-count sweep (runs its own simulations)
+    graph8_intra_enclave(rng)
+    print("  ✓ Graph 8 generated (phase4)")
 
-    graph7a_queue_state(results, enclaves)
-    print("  ✓ Graph 7a generated (routing intelligence)")
-    graph7b_epc_availability(results, enclaves)
-    print("  ✓ Graph 7b generated (EPC swap events)")
-    graph7c_load_imbalance(results, enclaves)
-    print("  ✓ Graph 7c generated (latency CDF)")
-    graph7f_deadline(results, enclaves)
-    print("  ✓ Graph 7f generated (deadline compliance)")
-    graph7g_cache_reuse(results, enclaves)
-    print("  ✓ Graph 7g generated (cache affinity)")
+    # ── Single experiment for all diagnostic views (9, 12, 13, 14, 15) ──
+    results, enclaves = run_graph8_experiment(rng)
+    print("  ✓ Graph 8 experiment complete (1 run × 3 algorithms)")
+
+    graph9_queue_state(results, enclaves)
+    print("  ✓ Graph 9 generated (routing intelligence)")
+    graph12_epc_availability(results, enclaves)
+    print("  ✓ Graph 12 generated (EPC swap events)")
+    graph13_load_imbalance(results, enclaves)
+    print("  ✓ Graph 13 generated (latency CDF)")
+    graph14_deadline(results, enclaves)
+    print("  ✓ Graph 14 generated (deadline compliance)")
+    graph15_cache_reuse(results, enclaves)
+    print("  ✓ Graph 15 generated (cache affinity)")
 
     # Parameter sweep graphs (run their own simulations)
-    graph7d_contention(rng)
-    print("  ✓ Graph 7d generated (heterogeneity sweep)")
-    graph7e_sensitivity(rng)
-    print("  ✓ Graph 7e generated (sensitivity analysis)")
-    graph7h_enclave_scaling(rng)
-    print("  ✓ Graph 7h generated (enclave scaling)")
-
-    graph8_recovery(rng)
-    print("  ✓ Graph 8 generated (phase5)")
+    graph10_contention(rng)
+    print("  ✓ Graph 10 generated (heterogeneity sweep)")
+    graph11_sensitivity(rng)
+    print("  ✓ Graph 11 generated (sensitivity analysis)")
+    graph16_enclave_scaling(rng)
+    print("  ✓ Graph 16 generated (enclave scaling)")
 
     print("=" * 72)
 

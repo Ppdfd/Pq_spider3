@@ -19,7 +19,7 @@ from utils.eval_utils import (
     set_global_seed, ensure_dirs, configure_matplotlib, summarize_runs,
     save_csv, plot_lines, plot_bar, save_csv_simple, noisy_curve, ar1_noise
 )
-from phase4_load_balance.graph7 import SIMULATION_PARAMS
+from phase4_load_balance.graph8 import SIMULATION_PARAMS
 
 @dataclass
 class WorkloadTask:

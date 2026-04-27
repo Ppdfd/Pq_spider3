@@ -24,6 +24,13 @@ Added complete paper-style evaluation graph generation.
 - Graph 4: CP-ABE Decryption Cost at User
 - Graph 5: Homogeneous Fog Nodes
 - Graph 6: Heterogeneous Fog Nodes
-- Graph 8: Recovery Time vs Failure Rate
-
-Graph 7 is intentionally skipped.
+- Graph 7: Recovery Time vs Failure Rate
+- Graph 8: Intra-node Scheduling under Enclave Heterogeneity
+- Graph 9: Routing Intelligence — Task Distribution
+- Graph 10: Heterogeneity Sensitivity
+- Graph 11: Parameter Sensitivity Analysis
+- Graph 12: Cumulative EPC Swap Events
+- Graph 13: Latency CDF
+- Graph 14: Deadline Compliance Rate
+- Graph 15: Cache Affinity
+- Graph 16: Enclave Scaling Analysis

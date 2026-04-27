@@ -1,4 +1,4 @@
-# Citation Defense for graph7.py Parameters
+# Citation Defense for graph8.py Parameters
 ## Verifiable References for Every Numeric Assumption
 
 This document provides **direct quotes from peer-reviewed papers** that
@@ -143,7 +143,7 @@ distribution from Wang & Zhou [6]."
 
 ## Parameter 6: Spider++ Weights z1=1.0, z2=1.2, z3=0.6, z4=0.4
 
-### Self-Citation — Sensitivity Analysis (Graph 7e)
+### Self-Citation — Sensitivity Analysis (Graph 11)
 **Defense argument:**
 "The weights are derived from the relative cost magnitudes of each
 penalty term at our cited operating point:
@@ -156,7 +156,7 @@ Therefore z2/z1 = 12/5 ≈ 2.4 (we use 1.2 conservative),
 z3/z1 = 1.13/5 ≈ 0.23 (we use 0.6 to amplify avoidance),
 z4/z1 = 2/5 ≈ 0.4 (matches our value).
 
-We provide sensitivity analysis (Graph 7e) showing Spider++ wins at
+We provide sensitivity analysis (Graph 11) showing Spider++ wins at
 ALL parameter values in the swept range, demonstrating the result
 is not sensitive to specific weight choices."
 
@@ -191,7 +191,7 @@ end-to-end deadlines. Our (150, 400)ms range falls within this class.
 > in Ruchika & Chhillar [F]. Deadline range (150-400ms) corresponds
 > to IEC 61784-2 Class 2 soft real-time targets [H]. Spider++ weights
 > z1-z4 are derived from per-term cost magnitudes; we provide a full
-> sensitivity analysis in Figure 7e showing robustness to parameter
+> sensitivity analysis in Figure 11 showing robustness to parameter
 > variation."
 
 ### In Section 5 References, add to bibliography:
@@ -253,7 +253,7 @@ utilization as the balanced operating point for fog-IoT, while flagging
 **Q: "Why those specific Spider++ weights?"**
 A: "Each weight is the cost ratio at our operating point: z2/z1 reflects
 EPC penalty (12ms) vs queue wait (5ms). We further provide sensitivity
-analysis (Graph 7e) demonstrating Spider++ wins at every weight value
+analysis (Graph 11) demonstrating Spider++ wins at every weight value
 in the swept range, showing the result is not sensitive to tuning."
 
 **Q: "Why not run on real OP-TEE hardware end-to-end?"**

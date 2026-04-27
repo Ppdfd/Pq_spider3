@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import numpy as np
-from phase4_load_balance.graph7 import (
+from phase4_load_balance.graph8 import (
     generate_enclaves, generate_tasks, choose_enclave, 
     clone_enclaves, execute_on_enclave, _drain_queues,
     _enclave_score_eq46, _load_phase5_service_ms,
