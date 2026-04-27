@@ -1,9 +1,9 @@
 {
-    "batch_verify": 0.0281000102404505,
-    "enclave_decrypt": 38.84799999650568,
-    "aes_reencrypt": 0.0737999944249168,
-    "tee_partial_cpabe": 9.226299996953458,
-    "ree_policy_expand": 0.035899996873922646,
-    "dilithium_sign": 23.172000001068227,
-    "total_fog_latency": 71.50869999895804
+    "batch_verify": 0.03409999771974981,
+    "enclave_decrypt": 39.474200006225146,
+    "aes_reencrypt": 0.09159999899566174,
+    "tee_partial_cpabe": 9.998299996368587,
+    "ree_policy_expand": 0.04119999357499182,
+    "dilithium_sign": 133.19110000156797,
+    "total_fog_latency": 183.53239999851212
 }

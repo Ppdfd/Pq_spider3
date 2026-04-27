@@ -1,101 +1,101 @@
 {
-    "batch_profiling": 0.01720000000204891,
+    "batch_profiling": 0.027700007194653153,
     "node_scoring_per_pkt": [
-        0.03029999788850546,
-        0.02020000829361379,
-        0.019700004486367106,
-        0.018999999156221747,
-        0.01889999839477241,
-        0.019700004486367106,
+        0.03130000550299883,
+        0.02030000905506313,
+        0.019899991457350552,
         0.018999999156221747,
         0.018799997633323073,
-        0.01920000067912042,
-        0.01850000990089029
+        0.01930000144056976,
+        0.019099999917671084,
+        0.018999999156221747,
+        0.019099999917671084,
+        0.01889999839477241
     ],
     "enclave_scoring_per_pkt": [
-        0.012599994079209864,
-        0.009499999578110874,
-        0.007000009645707905,
-        0.005699999746866524,
+        0.012600008631125093,
+        0.00960000033956021,
+        0.00689999433234334,
+        0.005900001269765198,
+        0.005800000508315861,
         0.005699999746866524,
         0.005599998985417187,
-        0.00549999822396785,
-        0.005399997462518513,
-        0.005599998985417187,
-        0.00549999822396785
+        0.005699999746866524,
+        0.005900001269765198,
+        0.005699999746866524
     ],
     "assignments": [
         {
             "device": "IIoT-DEV-000",
             "fog_node": 0,
-            "enclave": "E_0_3",
-            "node_score": 4.4244,
-            "enclave_score": 0.0036
+            "enclave": "E_0_1",
+            "node_score": 4.4159,
+            "enclave_score": 0.1723
         },
         {
             "device": "IIoT-DEV-001",
             "fog_node": 1,
-            "enclave": "E_1_3",
-            "node_score": 4.4471,
-            "enclave_score": 0.0035
+            "enclave": "E_1_1",
+            "node_score": 4.4386,
+            "enclave_score": 0.1705
         },
         {
             "device": "IIoT-DEV-002",
             "fog_node": 0,
-            "enclave": "E_0_3",
-            "node_score": 4.4549,
-            "enclave_score": -4.9891
+            "enclave": "E_0_1",
+            "node_score": 4.4464,
+            "enclave_score": -4.9826
         },
         {
             "device": "IIoT-DEV-003",
             "fog_node": 1,
-            "enclave": "E_1_3",
-            "node_score": 4.4706,
-            "enclave_score": -4.9895
+            "enclave": "E_1_1",
+            "node_score": 4.4621,
+            "enclave_score": -4.9879
         },
         {
             "device": "IIoT-DEV-004",
             "fog_node": 2,
             "enclave": "E_2_1",
-            "node_score": 4.4732,
-            "enclave_score": 0.0041
+            "node_score": 4.4647,
+            "enclave_score": 0.1706
         },
         {
             "device": "IIoT-DEV-005",
             "fog_node": 2,
             "enclave": "E_2_1",
-            "node_score": 4.5,
+            "node_score": 4.4915,
             "enclave_score": -4.9878
         },
         {
             "device": "IIoT-DEV-006",
             "fog_node": 0,
-            "enclave": "E_0_3",
-            "node_score": 4.5056,
-            "enclave_score": -4.9819
+            "enclave": "E_0_1",
+            "node_score": 4.4971,
+            "enclave_score": -4.9709
         },
         {
             "device": "IIoT-DEV-007",
             "fog_node": 1,
-            "enclave": "E_1_3",
-            "node_score": 4.5097,
-            "enclave_score": -4.9825
+            "enclave": "E_1_1",
+            "node_score": 4.5012,
+            "enclave_score": -4.9798
         },
         {
             "device": "IIoT-DEV-008",
             "fog_node": 2,
             "enclave": "E_2_1",
-            "node_score": 4.5448,
+            "node_score": 4.5363,
             "enclave_score": -4.9797
         },
         {
             "device": "IIoT-DEV-009",
             "fog_node": 1,
-            "enclave": "E_1_3",
-            "node_score": 4.5645,
-            "enclave_score": -4.9754
+            "enclave": "E_1_1",
+            "node_score": 4.556,
+            "enclave_score": -4.9717
         }
     ],
-    "total_scheduler_latency": 51.20610000449233,
+    "total_scheduler_latency": 51.171799990697764,
     "rejected_count": 0
 }

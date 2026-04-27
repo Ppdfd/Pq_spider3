@@ -1,14 +1,14 @@
 {
     "decrypted_payloads": [
-        "** PACKET 0 FROM JSON ** Sensor reading: 98.6\u0e22\u0e10F",
-        "** PACKET 1 FROM JSON ** Sensor reading: 105\u0e22\u0e10F",
-        "** PACKET 2 FROM JSON ** Emergency shutdown requested",
-        "Telemetry Data from IIoT-DEV-003 at 1777288704.6572204",
-        "Telemetry Data from IIoT-DEV-004 at 1777288704.6603136",
-        "Telemetry Data from IIoT-DEV-005 at 1777288704.662848",
-        "Telemetry Data from IIoT-DEV-006 at 1777288704.665882",
-        "Telemetry Data from IIoT-DEV-007 at 1777288704.6683924",
-        "Telemetry Data from IIoT-DEV-008 at 1777288704.6714065",
-        "Telemetry Data from IIoT-DEV-009 at 1777288704.6739047"
+        "{\"sensor_id\": \"IIoT-DEV-000\", \"type\": \"temperature\", \"value\": 98.6, \"unit\": \"F\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-001\", \"type\": \"pressure\", \"value\": 105.2, \"unit\": \"kPa\", \"status\": \"warning\"}",
+        "{\"sensor_id\": \"IIoT-DEV-002\", \"type\": \"humidity\", \"value\": 45.0, \"unit\": \"%\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-003\", \"type\": \"vibration\", \"value\": 0.02, \"unit\": \"mm/s\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-004\", \"type\": \"voltage\", \"value\": 220.1, \"unit\": \"V\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-005\", \"type\": \"current\", \"value\": 15.4, \"unit\": \"A\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-006\", \"type\": \"temperature\", \"value\": 108.9, \"unit\": \"F\", \"status\": \"critical\", \"alert\": \"SHUTDOWN_RECOMMENDED\"}",
+        "{\"sensor_id\": \"IIoT-DEV-007\", \"type\": \"flow_rate\", \"value\": 50.2, \"unit\": \"L/min\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-008\", \"type\": \"gas_level\", \"value\": 0.01, \"unit\": \"ppm\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-009\", \"type\": \"actuator_status\", \"state\": \"open\", \"uptime_hours\": 342, \"status\": \"nominal\"}"
     ]
 }

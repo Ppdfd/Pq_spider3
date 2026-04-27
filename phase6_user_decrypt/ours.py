@@ -136,7 +136,14 @@ def run_phase6_simulation():
             decoded_chunk = chunk.decode("utf-8", errors="ignore").replace("\x00", "")
             payloads.append(decoded_chunk)
             
-        loader.save_data(Path(__file__).parent, "plaintext.json", {"decrypted_payloads": payloads})
+        full_packet = {
+            "batch_id": bytes.fromhex(omega["batch_id"]).decode("utf-8", errors="ignore"),
+            "associated_data": aad.decode("utf-8", errors="ignore"),
+            "signature_verified": True,
+            "policy_type": omega["ct_labe"]["policy_type"],
+            "decrypted_payloads": payloads
+        }
+        loader.save_data(Path(__file__).parent, "plaintext.json", full_packet)
         print("  -> Saved full plaintext to phase6_user_decrypt/output/plaintext.json")
     except Exception as e:
         print(f"  ! AES-GCM decrypt failed: {e}")
