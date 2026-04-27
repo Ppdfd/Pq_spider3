@@ -26,7 +26,7 @@ def graph1_setup_phase(rng: np.random.Generator, reps: int = 15) -> Dict[str, np
 
     Measures the FULL Phase-I CP-ABE setup as defined in each paper:
 
-    Spider++ (PQ_SPIDER, Eq 1-5):
+    Spider (PQ_SPIDER, Eq 1-5):
       Eq 1:  ID_j = H(attr_j)                         — attribute hashing
       Eq 2:  (MPK, MSK) ← Setup(1^λ, {ID_j})          — matrix A + dual-Regev keys
              For each attr: t_j ← small_vec, u_j = A^T · t_j   (mat-vec multiply)
@@ -59,7 +59,7 @@ def graph1_setup_phase(rng: np.random.Generator, reps: int = 15) -> Dict[str, np
             attr_names = [f"Attr{i}" for i in range(n_attr_int)]
             user_attrs = attr_names[: max(1, n_attr_int // 2)]
 
-            # ── Spider++ (Ours): Full Phase I (Eq 1-5) ──
+            # ── Spider (Ours): Full Phase I (Eq 1-5) ──
             t0 = _time.perf_counter()
             # Eq 2: Setup — generates n×n matrix A
             aa = LatticeCPABE(n=256, q=3329)
@@ -95,12 +95,12 @@ def graph1_setup_phase(rng: np.random.Generator, reps: int = 15) -> Dict[str, np
     ours_mean, ours_std = summarize_runs(ours_runs)
     ref4_mean, ref4_std = summarize_runs(ref4_runs)
 
-    data = {"Ref[4]": ref4_mean, "Spider++ (Ours)": ours_mean}
+    data = {"Ref[4]": ref4_mean, "Spider (Ours)": ours_mean}
     save_csv(RAW_DIR / "graph1_setup_phase.csv", "Number of Attributes", attrs, data)
     plot_lines(
         attrs,
         {"Ref[4]": (ref4_mean, ref4_std),
-         "Spider++ (Ours)": (ours_mean, ours_std)},
+         "Spider (Ours)": (ours_mean, ours_std)},
         "Graph 1: CP-ABE Setup Latency",
         "Number of Attributes",
         "CP-ABE Setup Latency (ms)",

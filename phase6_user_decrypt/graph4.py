@@ -31,7 +31,7 @@ def graph4_cpabe_decryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
       - Per PACKET: full policy_eval (LSSS weight computation) + decrypt
       - No caching of LSSS reconstruction weights between packets
 
-    Spider++ (Ours): Batch-aware with cached policy_eval.
+    Spider (Ours): Batch-aware with cached policy_eval.
       - First packet: full policy_eval + cpabe_decrypt
       - Subsequent packets in batch: reuse cached LSSS weights
       - Only cpabe_decrypt per additional packet
@@ -97,13 +97,13 @@ def graph4_cpabe_decryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
     ours_mean, ours_std = summarize_runs(ours_runs)
     ref4_mean, ref4_std = summarize_runs(ref4_runs)
 
-    data = {"Ref[4]": ref4_mean, "Spider++ (Ours)": ours_mean}
+    data = {"Ref[4]": ref4_mean, "Spider (Ours)": ours_mean}
     save_csv(RAW_DIR / "graph4_cpabe_decryption.csv",
              "Number of Attributes", attrs, data)
     plot_lines(
         attrs,
         {"Ref[4]": (ref4_mean, ref4_std),
-         "Spider++ (Ours)": (ours_mean, ours_std)},
+         "Spider (Ours)": (ours_mean, ours_std)},
         "Graph 4: CP-ABE Decryption Cost (User)",
         "Number of Attributes",
         "Decryption Latency (ms)",

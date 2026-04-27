@@ -13,7 +13,7 @@ def graph10_sensitivity(rng: np.random.Generator) -> None:
     """Graph 10: Parameter Sensitivity Analysis (2-panel).
 
     Sweeps the two most influential simulation parameters independently
-    to demonstrate that Spider++'s advantage is robust and not an artifact
+    to demonstrate that Spider's advantage is robust and not an artifact
     of specific parameter choices.
 
     Panel A: Varies EPC swap cost from 0ms to 20ms (holding contention fixed)
@@ -26,8 +26,8 @@ def graph10_sensitivity(rng: np.random.Generator) -> None:
     from phase4_load_balance.optee_bench.loader import load_measurements
 
     n_tasks = config.STRESS_DIAGNOSTIC_N_TASKS
-    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
-    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
+    algorithms = ["Round-Robin", "Least-Queue", "Spider (Ours)"]
+    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider (Ours)": "#2196F3"}
 
     base_enclaves = generate_enclaves(4, rng)
 

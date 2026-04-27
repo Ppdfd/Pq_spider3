@@ -16,12 +16,12 @@ def graph14_cache_reuse(
     When a task is assigned to an enclave that recently processed similar
     work, the enclave's caches are warm (Eq 45: A_affin). This graph shows
     the running average of enc.recent_count at time of selection.
-    Spider++ should show higher reuse because Eq 45 explicitly rewards
+    Spider should show higher reuse because Eq 45 explicitly rewards
     affinity; RR and LQ ignore cache state.
 
     Uses pre-computed results from run_graph8_experiment().
     """
-    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
+    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider (Ours)": "#2196F3"}
 
     fig, ax = plt.subplots(figsize=(8, 5))
 

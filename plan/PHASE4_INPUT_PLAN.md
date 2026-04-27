@@ -1,4 +1,4 @@
-# Phase 4: Spider++ Load Balancing — Real Input Plan (OP-TEE QEMU)
+# Phase 4: Spider Load Balancing — Real Input Plan (OP-TEE QEMU)
 
 > **This plan is anchored to the actual OP-TEE QEMU v8 setup at `~/optee-qemu`.**
 > All hardware numbers, paths, and commands are specific to this environment.
@@ -652,7 +652,7 @@ This mounts `~/optee-qemu/` as `/mnt/host/` inside the QEMU guest. You can:
 ┌──────────────────────┐    ┌──────────────────────┐
 │  Phase 3 (friend)    │    │                      │
 │  ours_batch.json     ├───►│  Phase 4 (YOU)       │
-│  validated packets   │    │  Spider++            │
+│  validated packets   │    │  Spider            │
 │  with priority/      │    │  ✅ all inputs real  │
 │  deadline fields     │    │                      │
 └──────────────────────┘    └──────────────────────┘

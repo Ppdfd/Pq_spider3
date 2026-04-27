@@ -1,4 +1,4 @@
-# bugtest_v4.py — print Spider++ score breakdown for each enclave
+# bugtest_v4.py — print Spider score breakdown for each enclave
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -68,5 +68,5 @@ for i, t in enumerate(tasks):
             print(f"    SCORE         = {total:.2f}")
         break
     
-    e = choose_enclave(encs_sp, i, t, epc_req, "Spider++ (Ours)", rng_sp)
+    e = choose_enclave(encs_sp, i, t, epc_req, "Spider (Ours)", rng_sp)
     execute_on_enclave(e, t, epc_req, rng_sp)

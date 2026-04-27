@@ -27,7 +27,7 @@ def run_all_graphs():
     configure_matplotlib()
 
     print("=" * 72)
-    print("Spider++ Modular Evaluation Simulation")
+    print("Spider Modular Evaluation Simulation")
     print("=" * 72)
 
     graph1_setup_phase(rng)
@@ -37,10 +37,10 @@ def run_all_graphs():
     print("  ✓ Graph 2 generated (phase3)")
 
     graph3_cpabe_encryption(rng)
-    #print("  ✓ Graph 3 generated (phase5)")
+    print("  ✓ Graph 3 generated (phase5)")
 
     graph4_cpabe_decryption(rng)
-    #print("  ✓ Graph 4 generated (phase6)")
+    print("  ✓ Graph 4 generated (phase6)")
 
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
     print("  ✓ Graph 5 generated (phase4)")

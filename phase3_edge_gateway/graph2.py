@@ -89,7 +89,7 @@ MODE_SEED_OFFSET = {
 
 def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float, float]:
     """
-    Simulate encryption tasks under no-cache, random-cache, and Spider++ reuse-aware
+    Simulate encryption tasks under no-cache, random-cache, and Spider reuse-aware
     cache placement.  Increasing task_count raises offered load and queue buildup.
     """
 
@@ -145,7 +145,7 @@ def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
     modes = {
         "No Cache-Aware Scheduling": "no_cache",
         "Random Cache Placement": "random_cache",
-        "Spider++ (Ours)": "spider_cache",
+        "Spider (Ours)": "spider_cache",
     }
 
     mean_series: Dict[str, np.ndarray] = {}

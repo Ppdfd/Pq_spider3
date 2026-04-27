@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Spider++ Full Evaluation Simulator
+Spider Full Evaluation Simulator
 ==================================
 
 This module generates the complete evaluation graph set for the research
 system "Post-Quantum Secure and Dynamic Load-Balanced Encryption for IIoT
-Data in Fog Computing (Spider++)".
+Data in Fog Computing (Spider)".
 
 The code is intentionally simulation-based rather than benchmark-forging:
 it models queue buildup, cryptographic service time, cache locality,
@@ -26,14 +26,14 @@ Graph 7 is intentionally skipped because the requested experiment excludes
 intra-node multi-enclave scheduling.
 
 Run from the project root:
-    python3 run_spiderpp_evaluation.py
+    python3 run_spider_evaluation.py
 
 or directly:
-    python3 evaluation/spiderpp_full_evaluation.py
+    python3 evaluation/spider_full_evaluation.py
 
 Outputs:
-    graphs/spiderpp_full_evaluation/*.png
-    graphs/spiderpp_full_evaluation/raw/*.csv
+    graphs/spider_full_evaluation/*.png
+    graphs/spider_full_evaluation/raw/*.csv
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ from typing import Dict, Iterable, List, Tuple
 # Use a non-interactive backend and writable config directory so the script
 # runs cleanly on servers, CI runners, Docker containers, and student laptops.
 os.environ.setdefault("MPLBACKEND", "Agg")
-os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "spiderpp_mpl_cache"))
+os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "spider_mpl_cache"))
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,7 +70,7 @@ GLOBAL_SEED = 20260424
 def project_root() -> Path:
     """
     Resolve the project root whether this file is executed from:
-      - Pq_spider_new-main/evaluation/spiderpp_full_evaluation.py, or
+      - Pq_spider_new-main/evaluation/spider_full_evaluation.py, or
       - copied directly into the project root.
     """
 
@@ -81,7 +81,7 @@ def project_root() -> Path:
 
 
 ROOT_DIR = project_root()
-OUT_DIR = ROOT_DIR / "graphs" / "spiderpp_full_evaluation"
+OUT_DIR = ROOT_DIR / "graphs" / "spider_full_evaluation"
 RAW_DIR = OUT_DIR / "raw"
 
 # Ensure project root is on sys.path for crypto_primitives imports
@@ -108,9 +108,9 @@ PLOT = PlotConfig()
 MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
 
 SCHEME_STYLES = {
-    "Spider++ (Ours)": {"color": "#1A73E8", "marker": "o"},
-    "Spider++ Reuse-Aware Cache (Ours)": {"color": "#1A73E8", "marker": "o"},
-    "Spider++ Secure Task Delegation (Ours)": {"color": "#1A73E8", "marker": "o"},
+    "Spider (Ours)": {"color": "#1A73E8", "marker": "o"},
+    "Spider Reuse-Aware Cache (Ours)": {"color": "#1A73E8", "marker": "o"},
+    "Spider Secure Task Delegation (Ours)": {"color": "#1A73E8", "marker": "o"},
     "Ref[4]": {"color": "#E8710A", "marker": "s"},
     "Ref[35]": {"color": "#34A853", "marker": "^"},
     "Ref[36]": {"color": "#EA4335", "marker": "D"},

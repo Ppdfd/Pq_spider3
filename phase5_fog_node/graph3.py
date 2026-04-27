@@ -34,7 +34,7 @@ def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
       - Per PACKET: full encrypt() pipeline including all internal setup
       → Cost = setup_overhead + core_crypto (per batch)
 
-    Spider++ (Ours): Persistent TEE enclave with Phase I caching.
+    Spider (Ours): Persistent TEE enclave with Phase I caching.
       - All attribute keys pre-derived and cached in enclave (Eq 2)
       - LSSS policy pre-computed and cached (Eq 3-4, C_policy)
       - A_float conversion done once and persisted
@@ -78,7 +78,7 @@ def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
                 ref4_times.append((_time.perf_counter() - t0) * 1000)
             r_vals.append(float(np.mean(ref4_times)))
 
-            # ── Spider++ (Ours): Persistent enclave — all caches warm ──
+            # ── Spider (Ours): Persistent enclave — all caches warm ──
             # Phase I already pre-computed:
             #   - Dual-Regev keys for all attributes (Eq 2)
             #   - LSSS policy matrix (Eq 3-4)
@@ -110,13 +110,13 @@ def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
     ours_mean, ours_std = summarize_runs(ours_runs)
     ref4_mean, ref4_std = summarize_runs(ref4_runs)
 
-    data = {"Ref[4]": ref4_mean, "Spider++ (Ours)": ours_mean}
+    data = {"Ref[4]": ref4_mean, "Spider (Ours)": ours_mean}
     save_csv(RAW_DIR / "graph3_cpabe_encryption.csv",
              "Number of Attributes", attrs, data)
     plot_lines(
         attrs,
         {"Ref[4]": (ref4_mean, ref4_std),
-         "Spider++ (Ours)": (ours_mean, ours_std)},
+         "Spider (Ours)": (ours_mean, ours_std)},
         "Graph 3: CP-ABE Encryption Cost (Fog)",
         "Number of Attributes",
         "CP-ABE Encryption Latency (ms)",
@@ -129,7 +129,7 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
     Fair recovery simulation.  Per-task costs derived from measured values:
       - Full reprocess ≈ Phase 2 enc (~1.6ms) + Phase 5 fog (~44ms) ≈ 45ms
       - Retry from checkpoint ≈ fog re-execution only ≈ 15ms
-      - Spider++ delegation ≈ Dilithium verify (~6.2ms) + state transfer (~3ms) ≈ 9ms
+      - Spider delegation ≈ Dilithium verify (~6.2ms) + state transfer (~3ms) ≈ 9ms
         AUDIT FIX: Previous value of 6ms was incorrect — measured Dilithium
         verify alone takes ~6.2ms on this hardware.
     All methods share the same detection latency and noise level.
@@ -158,7 +158,7 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
         per_task = float(rng.normal(15, 3))
         overhead = float(rng.normal(20, 5))
         recovery = detection + overhead + per_task * (affected / max(1, cluster_nodes - failed))
-    elif method == "Spider++ (Ours)":
+    elif method == "Spider (Ours)":
         # AUDIT FIX: Dilithium verify (~6.2ms measured) + state transfer (~3ms) ≈ 9ms
         per_task = float(rng.normal(9, 2))
         overhead = float(rng.normal(15, 3))

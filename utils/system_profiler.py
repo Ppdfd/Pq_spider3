@@ -18,7 +18,7 @@ import psutil
 
 
 class SystemProfiler:
-    """Reads real hardware state for Spider++ inputs."""
+    """Reads real hardware state for Spider inputs."""
 
     def __init__(self):
         self._freq_cache = None

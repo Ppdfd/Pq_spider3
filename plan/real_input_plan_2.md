@@ -57,7 +57,7 @@ import psutil, os, socket, time, json, math, hashlib
 from pathlib import Path
 
 class SystemProfiler:
-    """Reads real hardware state for Spider++ inputs."""
+    """Reads real hardware state for Spider inputs."""
     
     def get_capability_score(self, node_id=0):
         """Eq 34: C_j from ACTUAL hardware — not build config."""

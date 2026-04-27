@@ -1,5 +1,5 @@
 """
-Phase IV (Ours): Spider++ Hierarchical Enclave-Oriented Load Balancing
+Phase IV (Ours): Spider Hierarchical Enclave-Oriented Load Balancing
 ======================================================================
 Matches PQ-SPIDER paper Sec III-C, Phase IV (Eq 25-53):
 
@@ -171,7 +171,7 @@ def enclave_score(enclave, profile, recent_count):
 
 def run_phase4_simulation():
     print("=" * 60)
-    print("PQ-SPIDER Phase IV: Spider++ Hierarchical Load Balancing")
+    print("PQ-SPIDER Phase IV: Spider Hierarchical Load Balancing")
     print("=" * 60)
 
     # Load OP-TEE benchmark measurements (patches config at runtime)

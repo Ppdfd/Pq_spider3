@@ -140,7 +140,7 @@ def run_phase2_simulation():
         metrics["total_device_latency"].append(t_total)
 
         # Eq 20: P_i = {ID_i, Metadata, c_kem, c_gkem, CT_i, N_i, AAD_i, Tag_i, Auth_i}
-        # Spider++ inputs (Eq 29-30): derived from actual packet properties
+        # Spider inputs (Eq 29-30): derived from actual packet properties
         # Priority from payload Shannon entropy (data-driven, not random)
         byte_counts = {}
         for b in payload:

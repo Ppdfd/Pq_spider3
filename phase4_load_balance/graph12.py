@@ -14,12 +14,12 @@ def graph12_load_imbalance(
     """Graph 12: Latency CDF — Cumulative Distribution of Per-Task Latency.
 
     Shows the FULL distribution of task completion times. A steeper CDF
-    (further left) means more tasks finish quickly. Spider++ should have
+    (further left) means more tasks finish quickly. Spider should have
     the steepest curve, demonstrating consistently low latency.
 
     Uses pre-computed results from run_graph8_experiment().
     """
-    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
+    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider (Ours)": "#2196F3"}
 
     fig, ax = plt.subplots(figsize=(8, 5))
 

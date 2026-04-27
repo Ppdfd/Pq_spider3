@@ -14,7 +14,7 @@ def graph9_queue_state(
     """Graph 9: Routing Intelligence — Task Distribution by Enclave Speed.
 
     Shows WHAT PERCENTAGE of tasks each algorithm routes to each enclave,
-    with enclaves sorted by service rate (speed). Spider++ intelligently
+    with enclaves sorted by service rate (speed). Spider intelligently
     concentrates work on fast enclaves; LQ distributes based on queue count
     alone and wastes capacity on slow enclaves; RR is blind.
 
@@ -30,7 +30,7 @@ def graph9_queue_state(
     n_enc = len(enclaves)
     bar_width = 0.22
     x_pos = np.arange(n_enc)
-    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
+    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider (Ours)": "#2196F3"}
     algorithms = list(results.keys())
     n_tasks = len(list(results.values())[0]["enc_ids"])
 

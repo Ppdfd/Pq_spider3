@@ -26,7 +26,7 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
     Fair recovery simulation.  Per-task costs derived from measured values:
       - Full reprocess ≈ Phase 2 enc (~1.6ms) + Phase 5 fog (~44ms) ≈ 45ms
       - Retry from checkpoint ≈ fog re-execution only ≈ 15ms
-      - Spider++ delegation ≈ Dilithium verify (~6.2ms) + state transfer (~3ms) ≈ 9ms
+      - Spider delegation ≈ Dilithium verify (~6.2ms) + state transfer (~3ms) ≈ 9ms
         AUDIT FIX: Previous value of 6ms was incorrect — measured Dilithium
         verify alone takes ~6.2ms on this hardware.
     All methods share the same detection latency and noise level.
@@ -55,7 +55,7 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
         per_task = float(rng.normal(15, 3))
         overhead = float(rng.normal(20, 5))
         recovery = detection + overhead + per_task * (affected / max(1, cluster_nodes - failed))
-    elif method == "Spider++ (Ours)":
+    elif method == "Spider (Ours)":
         # AUDIT FIX: Dilithium verify (~6.2ms measured) + state transfer (~3ms) ≈ 9ms
         per_task = float(rng.normal(9, 2))
         overhead = float(rng.normal(15, 3))
@@ -73,7 +73,7 @@ def graph7_recovery(rng: np.random.Generator, reps: int = 5) -> Dict[str, np.nda
     methods = [
         "No Delegation",
         "Simple Retry / Reassignment",
-        "Spider++ (Ours)",
+        "Spider (Ours)",
     ]
 
     mean_series: Dict[str, np.ndarray] = {}

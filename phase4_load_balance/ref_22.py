@@ -18,14 +18,14 @@ Algorithm:
 AUDIT NOTE (Node Model Mismatch):
   Paper [22] uses iFogSim with simple fog nodes characterised only
   by processing capacity and network latency.  This implementation
-  operates on Spider++'s fog node model (with enclaves, EPC budgets,
+  operates on Spider's fog node model (with enclaves, EPC budgets,
   trust scores), none of which exist in Paper [22].  The OLB scoring
   formula L_net + (Q+1)/μ is a REASONABLE APPROXIMATION of [22]'s
   intent (minimize total latency = network + processing), but it is
   not the paper's exact algorithm.  OLB's inner enclave selection
   (min queue) is a consistency shim — Paper [22] has no enclave concept.
 
-Characteristics vs Spider++:
+Characteristics vs Spider:
   - Single-level scheduling (no intra-node enclave selection)
   - Two-factor latency estimate (network + queue/rate)
   - No EPC memory awareness

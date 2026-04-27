@@ -46,7 +46,7 @@ PHASES = [
      True),
     ("Phase 3 (Gateway)*",  "phase3_edge_gateway",   "total_gateway_latency",
      False),
-    ("Phase 4 (Spider++)*", "phase4_load_balance",   "total_scheduler_latency",
+    ("Phase 4 (Spider)*", "phase4_load_balance",   "total_scheduler_latency",
      False),
     ("Phase 5 (Fog)",       "phase5_fog_node",       "total_fog_latency",
      True),
@@ -282,13 +282,13 @@ def main():
         print("# GENERATING GRAPHS")
         print("#" * 70 + "\n")
 
-        # Generate the complete paper-style Spider++ evaluation graph set:
-        if getattr(config, "GENERATE_SPIDERPP_FULL_EVALUATION", True):
+        # Generate the complete paper-style Spider evaluation graph set:
+        if getattr(config, "GENERATE_SPIDER_FULL_EVALUATION", True):
             try:
-                from run_all_graphs import run_all_graphs as run_spiderpp_full_graphs
-                run_spiderpp_full_graphs()
+                from run_all_graphs import run_all_graphs as run_spider_full_graphs
+                run_spider_full_graphs()
             except Exception as exc:
-                print(f"[WARN] Spider++ full evaluation graph generation failed: {exc}")
+                print(f"[WARN] Spider full evaluation graph generation failed: {exc}")
 
     # ═══════════════════════════════════════════════════════════
     # Summaries

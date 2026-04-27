@@ -25,11 +25,11 @@ Algorithm (Algorithm 2, Eq. 8):
 
   Implementation note: Paper [37] describes pairwise coordination
   across Medical Centers (MCs).  This simulation models a single-
-  controller view for fair comparison against Spider++.  The
+  controller view for fair comparison against Spider.  The
   controller evaluates each candidate fog node as a potential
   offload target.
 
-Characteristics vs Spider++:
+Characteristics vs Spider:
   - Binary offloading decision (not weighted multi-factor score)
   - Two factors: processing time + communication overhead
   - No EPC memory awareness

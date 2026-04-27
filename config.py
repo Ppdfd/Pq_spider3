@@ -87,11 +87,11 @@ THETA2_KYBER   = 0.4     # Weight for cached Kyber precomputation (Eq 39)
 #
 # Weights are calibrated to match these magnitudes. P_cont was redesigned
 # to include explicit queue-imbalance penalty (q × service_est) so that
-# Spider++ behaves like Join-Shortest-Queue (JSQ, optimal under M/M/n)
+# Spider behaves like Join-Shortest-Queue (JSQ, optimal under M/M/n)
 # when EPC and rate signals don't dominate.
 #
 # Reviewer defense: Graph 7e (sensitivity analysis) demonstrates
-# Spider++ remains robust across z1-z4 perturbations.
+# Spider remains robust across z1-z4 perturbations.
 Z1_ENC_WAIT       = 1.0     # baseline weight (queue wait dominates at 70% load)
 Z2_ENC_EPC        = 0.05    # EPC penalty (12ms) is ~1/58 of queue wait
 Z3_ENC_CONTENTION = 0.50    # queue-balancing term — now drives load distribution
@@ -149,7 +149,7 @@ GRAPH_TEST_ROUNDS = 5
 # 6. SPIDER++ FULL PAPER EVALUATION GRAPHS
 # ---------------------------------------------------------
 # Generates Graph 1-8 for the paper-style simulation.
-GENERATE_SPIDERPP_FULL_EVALUATION = True
+GENERATE_SPIDER_FULL_EVALUATION = True
 
 
 # ---------------------------------------------------------
@@ -166,7 +166,7 @@ STRESS_TASK_COUNTS = [100, 200, 400, 700, 1000, 1500, 2000]
 # but need realistic load.
 STRESS_DIAGNOSTIC_N_TASKS = 500
 
-# Enclave count range — extended to demonstrate Spider++'s parallel
+# Enclave count range — extended to demonstrate Spider's parallel
 # batch decomposition advantage as enclave parallelism increases.
 STRESS_ENCLAVE_COUNTS = [2, 4, 8, 16, 24, 32]
 

@@ -35,7 +35,7 @@ Algorithm (Algorithm 1, Sec. III-C):
       the paper's cooperative learning mechanism.
     - The exploration rate decays exponentially per the paper's spec.
 
-Characteristics vs Spider++:
+Characteristics vs Spider:
   - Multi-round RL training (not single-pass)
   - Deadline-miss penalty reward function
   - Energy-aware via DVFS modelling

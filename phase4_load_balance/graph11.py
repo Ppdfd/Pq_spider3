@@ -14,12 +14,12 @@ def graph11_epc_availability(
     """Graph 11: Cumulative EPC Swap Events vs Task Arrivals.
 
     Counts how many tasks trigger expensive EPC page swapping (because
-    the chosen enclave was memory-depleted). Spider++ PROACTIVELY avoids
+    the chosen enclave was memory-depleted). Spider PROACTIVELY avoids
     depleted enclaves via Eq 43 (P_epc), resulting in fewer swap events.
 
     Uses pre-computed results from run_graph8_experiment().
     """
-    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
+    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider (Ours)": "#2196F3"}
     n_tasks = len(list(results.values())[0]["epc_swaps"])
 
     fig, ax = plt.subplots(figsize=(8, 5))

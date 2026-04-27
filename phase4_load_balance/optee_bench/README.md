@@ -1,6 +1,6 @@
 # OP-TEE Benchmark — Measured Values
 
-This folder connects the **OP-TEE QEMU benchmark TA** to the **Spider++ scheduler**.
+This folder connects the **OP-TEE QEMU benchmark TA** to the **Spider scheduler**.
 
 ## File Layout
 

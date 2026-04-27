@@ -179,7 +179,7 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
       Ref[22] : dynamic workload allocation mostly by current load.
       Ref[37] : SDN-like network/load aware heuristic.
       Ref[39] : resource/reliability/energy-aware heuristic.
-      Spider++: security-aware dual TEE/REE queue + network + EPC + trust.
+      Spider: security-aware dual TEE/REE queue + network + EPC + trust.
     """
 
     arrival = task.arrival_ms
@@ -227,10 +227,10 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
                           + energy_cost + reliability_penalty
                           + rng.normal(0.0, 1.5))
 
-    elif algorithm == "Spider++ (Ours)":
+    elif algorithm == "Spider (Ours)":
         scores = []
         for n in nodes:
-            # Spider++ models the exact split TEE -> REE critical path
+            # Spider models the exact split TEE -> REE critical path
             net_est = n.network_ms
             tee_est = (task.tee_work / n.tee_rate) + 2.6 + epc_pressure_penalty(task, n)
             ree_est = (task.ree_work / n.ree_rate) + 1.8
@@ -279,7 +279,7 @@ def simulate_load_balancing(
     """
 
     base_rng = np.random.default_rng(seed)
-    alg_offset = {"Ref[22]": 11, "Ref[37]": 23, "Ref[39]": 37, "Spider++ (Ours)": 53}[algorithm]
+    alg_offset = {"Ref[22]": 11, "Ref[37]": 23, "Ref[39]": 37, "Spider (Ours)": 53}[algorithm]
     rng = np.random.default_rng(seed + alg_offset)
 
     offered_load = 1.22 if heterogeneous else 1.12
@@ -305,7 +305,7 @@ def graph_load_balancing(
     """Common driver for Graph 5 and Graph 6."""
 
     node_counts = np.array([2, 4, 6, 8, 10, 12])
-    algorithms = ["Ref[22]", "Ref[37]", "Ref[39]", "Spider++ (Ours)"]
+    algorithms = ["Ref[22]", "Ref[37]", "Ref[39]", "Spider (Ours)"]
 
     mean_series: Dict[str, np.ndarray] = {}
     std_series: Dict[str, np.ndarray] = {}
@@ -474,7 +474,7 @@ def _enclave_score_eq46(
     z1: float, z2: float, z3: float, z4: float,
 ) -> float:
     """
-    Spider++ EnclaveScore (Eq 46) — enhanced with actual completion estimate.
+    Spider EnclaveScore (Eq 46) — enhanced with actual completion estimate.
 
     Like the Level 1 scheduler (choose_node), we estimate when this enclave
     would actually finish the task, combining:
@@ -529,7 +529,7 @@ def choose_enclave(
 
     Round-Robin:  blind cyclic rotation (ignores all state)
     Least-Queue:  picks enclave with shortest queue (ignores EPC/contention)
-    Spider++ (Eq 46): full EnclaveScore with completion estimate + EPC + contention
+    Spider (Eq 46): full EnclaveScore with completion estimate + EPC + contention
     """
     import config
 
@@ -539,7 +539,7 @@ def choose_enclave(
     elif algorithm == "Least-Queue":
         return min(enclaves, key=lambda e: e.queue_length)
 
-    elif algorithm == "Spider++ (Ours)":
+    elif algorithm == "Spider (Ours)":
         best_enc = None
         best_score = float("inf")
         for e in enclaves:
@@ -547,7 +547,7 @@ def choose_enclave(
                 e, task, epc_req,
                 tau=0.5,   # Lower threshold for intra-node (smaller EPC per enclave)
                 z1=config.Z1_ENC_WAIT,
-                z2=1.2,    # Stronger EPC sensitivity (key Spider++ advantage)
+                z2=1.2,    # Stronger EPC sensitivity (key Spider advantage)
                 z3=0.6,    # Stronger contention avoidance
                 z4=config.Z4_ENC_AFFIN,
             )
@@ -644,7 +644,7 @@ def simulate_intra_node(
     """
     import config
 
-    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider++ (Ours)": 41}[algorithm]
+    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
@@ -691,7 +691,7 @@ def simulate_intra_node_detailed(
     """
     import config
 
-    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider++ (Ours)": 41}[algorithm]
+    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 

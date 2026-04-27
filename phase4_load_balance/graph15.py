@@ -24,16 +24,16 @@ def graph15_enclave_scaling(rng: np.random.Generator, reps: int = 10) -> None:
     import config
     n_tasks = config.STRESS_DIAGNOSTIC_N_TASKS
     # Pulled from config.STRESS_ENCLAVE_COUNTS — see config.py Section 7 for
-    # rationale. Extended range showcases Spider++'s parallel batch
+    # rationale. Extended range showcases Spider's parallel batch
     # decomposition advantage as enclave parallelism increases.
     enclave_counts = np.array(config.STRESS_ENCLAVE_COUNTS)
-    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    algorithms = ["Round-Robin", "Least-Queue", "Spider (Ours)"]
 
     # Style matching IEEE reference
     styles = {
         "Round-Robin":      {"color": "#D94444", "marker": "s", "linestyle": ":",  "label": "Round-Robin"},
         "Least-Queue":      {"color": "#4CAF50", "marker": "^", "linestyle": "--", "label": "Least-Queue"},
-        "Spider++ (Ours)":  {"color": "#2171B5", "marker": "o", "linestyle": "-",  "label": "Spider++ (Ours)"},
+        "Spider (Ours)":  {"color": "#2171B5", "marker": "o", "linestyle": "-",  "label": "Spider (Ours)"},
     }
     fill_alpha = 0.15
 
@@ -89,7 +89,7 @@ def graph15_enclave_scaling(rng: np.random.Generator, reps: int = 10) -> None:
 
     # Annotation: improvement at max enclaves
     rr_last = lat_mean["Round-Robin"][-1]
-    sp_last = lat_mean["Spider++ (Ours)"][-1]
+    sp_last = lat_mean["Spider (Ours)"][-1]
     if rr_last > 0:
         pct_improvement = (1.0 - sp_last / rr_last) * 100.0
         # Place annotation at bottom-right
@@ -116,13 +116,13 @@ def graph15_enclave_scaling(rng: np.random.Generator, reps: int = 10) -> None:
                   color=s["color"], marker=s["marker"], linestyle=s["linestyle"],
                   linewidth=2, markersize=7, label=s["label"], zorder=3)
 
-    # Annotation for Spider++ EPC advantage
-    sp_epc_2 = epc_mean["Spider++ (Ours)"][0]
+    # Annotation for Spider EPC advantage
+    sp_epc_2 = epc_mean["Spider (Ours)"][0]
     rr_epc_2 = epc_mean["Round-Robin"][0]
     if rr_epc_2 > sp_epc_2:
         ax_b.annotate(
             "EPC-aware admission\nprevents violations",
-            xy=(4, epc_mean["Spider++ (Ours)"][1]),
+            xy=(4, epc_mean["Spider (Ours)"][1]),
             xytext=(7, rr_epc_2 * 0.7),
             fontsize=9, color="#2171B5", fontweight="bold",
             arrowprops=dict(arrowstyle="->", color="#2171B5", lw=1.2),

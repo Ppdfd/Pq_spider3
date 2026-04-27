@@ -259,7 +259,7 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
       Ref[22] : dynamic workload allocation mostly by current load.
       Ref[37] : SDN-like network/load aware heuristic.
       Ref[39] : resource/reliability/energy-aware heuristic.
-      Spider++: security-aware dual TEE/REE queue + network + EPC + trust.
+      Spider: security-aware dual TEE/REE queue + network + EPC + trust.
     """
 
     arrival = task.arrival_ms
@@ -307,10 +307,10 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
                           + energy_cost + reliability_penalty
                           + rng.normal(0.0, 1.5))
 
-    elif algorithm == "Spider++ (Ours)":
+    elif algorithm == "Spider (Ours)":
         scores = []
         for n in nodes:
-            # Spider++ models the exact split TEE -> REE critical path
+            # Spider models the exact split TEE -> REE critical path
             net_est = n.network_ms
             tee_est = (task.tee_work / n.tee_rate) + 2.6 + epc_pressure_penalty(task, n)
             ree_est = (task.ree_work / n.ree_rate) + 1.8
@@ -359,7 +359,7 @@ def simulate_load_balancing(
     """
 
     base_rng = np.random.default_rng(seed)
-    alg_offset = {"Ref[22]": 11, "Ref[37]": 23, "Ref[39]": 37, "Spider++ (Ours)": 53}[algorithm]
+    alg_offset = {"Ref[22]": 11, "Ref[37]": 23, "Ref[39]": 37, "Spider (Ours)": 53}[algorithm]
     rng = np.random.default_rng(seed + alg_offset)
 
     offered_load = 1.22 if heterogeneous else 1.12
@@ -522,7 +522,7 @@ def _enclave_score_eq46(
     z1: float, z2: float, z3: float, z4: float,
 ) -> float:
     """
-    Spider++ EnclaveScore (Eq 46) — enhanced with actual completion estimate.
+    Spider EnclaveScore (Eq 46) — enhanced with actual completion estimate.
 
     Like the Level 1 scheduler (choose_node), we estimate when this enclave
     would actually finish the task, combining:
@@ -567,11 +567,11 @@ def _enclave_score_eq46(
     # CRITICAL: The queue_length term is what enables load balancing.
     # Previously: P_cont = contention + queue_length / service_rate
     #   → Ratio queue/rate is small (e.g., 1/0.4 = 2.5), making P_cont
-    #     dominated by contention base. Spider++ would myopically pick
+    #     dominated by contention base. Spider would myopically pick
     #     the fastest enclave even when others were idle (JSQ optimal).
     #
     # Fixed: Add an explicit queue-imbalance term that scales with the
-    # service-time of waiting tasks. This makes Spider++ behave like
+    # service-time of waiting tasks. This makes Spider behave like
     # Join-Shortest-Queue (JSQ, optimal under M/M/n) when EPC and rate
     # signals don't dominate.
     queue_penalty_ms = enc.queue_length * service_est  # waiting time for this task
@@ -602,7 +602,7 @@ def choose_enclave(
 
     Round-Robin:  blind cyclic rotation (ignores all state)
     Least-Queue:  picks enclave with shortest queue (ignores EPC/contention)
-    Spider++ (Eq 46): full EnclaveScore with completion estimate + EPC + contention
+    Spider (Eq 46): full EnclaveScore with completion estimate + EPC + contention
     """
     import config
 
@@ -612,7 +612,7 @@ def choose_enclave(
     elif algorithm == "Least-Queue":
         return min(enclaves, key=lambda e: e.queue_length)
 
-    elif algorithm == "Spider++ (Ours)":
+    elif algorithm == "Spider (Ours)":
         best_enc = None
         best_score = float("inf")
         for e in enclaves:
@@ -648,7 +648,7 @@ def execute_on_enclave(
     2. EPC swap cost depends on task crypto_intensity (scheduler only
        knows the mean) and has ±20% lognormal variance
     3. OS scheduling jitter (exponential, unpredictable)
-    This ensures Spider++ makes GOOD BUT IMPERFECT predictions, like a
+    This ensures Spider makes GOOD BUT IMPERFECT predictions, like a
     real scheduler operating on stale/noisy telemetry.
     """
     arrival = task.arrival_ms
@@ -752,7 +752,7 @@ def simulate_intra_node(
     """
     import config
 
-    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider++ (Ours)": 41}[algorithm]
+    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
@@ -784,15 +784,15 @@ def graph8_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, 
       - Round-Robin: blind cyclic assignment
       - Least-Queue: shortest queue first (provably optimal under
                      homogeneous M/M/n, but cannot exploit speed variance)
-      - Spider++ (Eq 42-46): EnclaveScore with rate + EPC + contention
+      - Spider (Eq 42-46): EnclaveScore with rate + EPC + contention
 
     HONEST FRAMING (paper Section 5.2):
         Under homogeneous M/M/n queues, Join-Shortest-Queue (JSQ, our
-        Least-Queue baseline) is provably near-optimal. Spider++'s
+        Least-Queue baseline) is provably near-optimal. Spider's
         contribution is NOT to beat JSQ in idealized homogeneous settings
         but to handle the realistic IIoT case: heterogeneous enclave
         capacities, EPC pressure, and trust constraints. This graph
-        sweeps the heterogeneity axis to demonstrate Spider++'s advantage
+        sweeps the heterogeneity axis to demonstrate Spider's advantage
         scales with realistic deployment conditions.
 
     Data source: OP-TEE measured telemetry via load_measurements().
@@ -804,10 +804,10 @@ def graph8_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, 
     n_tasks = config.STRESS_DIAGNOSTIC_N_TASKS
 
     # X-axis: speed spread = ratio of fastest to slowest enclave.
-    # 1.0 = homogeneous (LQ optimal); 5.0 = highly heterogeneous (Spider++ shines).
+    # 1.0 = homogeneous (LQ optimal); 5.0 = highly heterogeneous (Spider shines).
     # Real IIoT fog deployments span 2-4× spread per Wang & Zhou [6].
     spread_factors = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0])
-    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    algorithms = ["Round-Robin", "Least-Queue", "Spider (Ours)"]
 
     measurements = load_measurements(config)
     raw_rate = float(measurements.get("service_rate", config.MEASURED_SERVICE_RATE))
@@ -909,7 +909,7 @@ def simulate_intra_node_detailed(
     """
     import config
 
-    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider++ (Ours)": 41}[algorithm]
+    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
@@ -993,7 +993,7 @@ def run_graph8_experiment(
         (results, enclaves) where results maps algorithm name to its
         simulate_intra_node_detailed() output dict.
     """
-    algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
+    algorithms = ["Round-Robin", "Least-Queue", "Spider (Ours)"]
     enclaves = generate_enclaves(4, rng)
 
     results: Dict[str, Dict[str, np.ndarray]] = {}

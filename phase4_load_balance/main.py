@@ -157,7 +157,7 @@ def _compute_metrics(metrics, fog_nodes):
 
     # Network: additional overhead for status queries to ALL nodes (for
     # schedulers that need global state, like SDN-GH)
-    # Spider++ only queries feasible nodes; OLB queries all
+    # Spider only queries feasible nodes; OLB queries all
     total_network += STATUS_MSG_KB * len(active_nodes)
 
     # Execution time = scheduler decision time (from measured metrics)
@@ -176,7 +176,7 @@ def main():
     print("# PHASE 4 — LOAD BALANCER COMPARISON")
     print("#" * 70 + "\n")
 
-    print("[1/4] Running Ours (Spider++)...")
+    print("[1/4] Running Ours (Spider)...")
     m_ours = run_phase4_simulation()
     print()
 
@@ -203,7 +203,7 @@ def main():
 
     # Compute four-dimensional metrics for each scheme
     results = {}
-    for name, m in [("Spider++ (Ours)", m_ours), ("OLB [22]", m_22),
+    for name, m in [("Spider (Ours)", m_ours), ("OLB [22]", m_22),
                      ("SDN-GH [37]", m_37), ("DIST [39]", m_39)]:
         results[name] = _compute_metrics(m, fog_nodes)
 
@@ -217,7 +217,7 @@ def main():
           f"{'(mJ/task)':>12} {'(KB)':>12} {'Used':>7}")
     print("-" * 90)
 
-    for name, m_raw in [("Spider++ (Ours)", m_ours), ("OLB [22]", m_22),
+    for name, m_raw in [("Spider (Ours)", m_ours), ("OLB [22]", m_22),
                          ("SDN-GH [37]", m_37), ("DIST [39]", m_39)]:
         r = results[name]
         asgn = m_raw.get("assignments", []) if m_raw else []

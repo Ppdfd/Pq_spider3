@@ -15,12 +15,12 @@ def graph13_deadline(
 
     Each task has a randomly assigned deadline (85–230ms). This graph shows
     what fraction of tasks each algorithm completes within the deadline.
-    Spider++ should achieve the highest compliance rate because its
+    Spider should achieve the highest compliance rate because its
     completion-time estimates (Eq 46) actively minimize latency.
 
     Uses pre-computed results from run_graph8_experiment().
     """
-    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
+    colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider (Ours)": "#2196F3"}
     algorithms = list(results.keys())
 
     met_pcts = []
