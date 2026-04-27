@@ -146,6 +146,11 @@ GENERATE_SPIDERPP_FULL_EVALUATION = True
 # where contention-awareness becomes the dominant scheduling factor.
 STRESS_TASK_COUNTS = [50, 100, 200, 300, 500, 750, 1000]
 
+# Default n_tasks for diagnostic graphs (7d, 7e, 7h) that don't sweep tasks
+# but need realistic load. 500 exposes algorithmic differences clearly
+# without the runtime cost of 1000+ task simulations.
+STRESS_DIAGNOSTIC_N_TASKS = 500
+
 # Enclave count range — extended to 32 to demonstrate Spider++'s parallel
 # batch decomposition advantage as enclave parallelism increases.
 STRESS_ENCLAVE_COUNTS = [2, 4, 8, 16, 24, 32]

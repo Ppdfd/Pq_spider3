@@ -1119,9 +1119,8 @@ def graph7d_contention(rng: np.random.Generator) -> None:
     """
     import config
 
-    n_tasks = 200
+    n_tasks = config.STRESS_DIAGNOSTIC_N_TASKS
     algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
-    # Spread factors: ratio of fastest/slowest enclave rate
     spread_factors = [1.0, 1.5, 2.0, 3.0, 4.0, 5.0]
 
     from phase4_load_balance.optee_bench.loader import load_measurements
@@ -1192,7 +1191,7 @@ def graph7e_sensitivity(rng: np.random.Generator) -> None:
     import config
     from phase4_load_balance.optee_bench.loader import load_measurements
 
-    n_tasks = 200
+    n_tasks = config.STRESS_DIAGNOSTIC_N_TASKS
     algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
     colors = {"Round-Robin": "#E8734A", "Least-Queue": "#4CAF50", "Spider++ (Ours)": "#2196F3"}
 
@@ -1297,8 +1296,8 @@ def graph7h_enclave_scaling(rng: np.random.Generator, reps: int = 10) -> None:
     depletion or custom rate ranges — the advantage must come from
     the algorithm (Eq 46), not from biased test design.
     """
-    n_tasks = 300
     import config
+    n_tasks = config.STRESS_DIAGNOSTIC_N_TASKS
     # Pulled from config.STRESS_ENCLAVE_COUNTS — see config.py Section 7 for
     # rationale. Extended range showcases Spider++'s parallel batch
     # decomposition advantage as enclave parallelism increases.
