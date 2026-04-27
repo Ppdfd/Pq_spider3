@@ -22,6 +22,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 _JSON = _HERE / "measured_values.json"
 
+_PRINTED = False
 
 def load_measurements(config_module=None):
     """
@@ -60,11 +61,14 @@ def load_measurements(config_module=None):
     if "trust_score" in data:
         config_module.MEASURED_BASE_TRUST = data["trust_score"]
 
-    source = data.get("source", "measured_values.json")
-    print(f"  [optee_bench] Loaded: rate={data.get('service_rate')}, "
-          f"latency={data.get('world_switch_ms')}ms, "
-          f"trust={data.get('trust_score')}")
-    print(f"  [optee_bench] Source: {source}")
+    global _PRINTED
+    if not _PRINTED:
+        source = data.get("source", "measured_values.json")
+        print(f"  [optee_bench] Loaded: rate={data.get('service_rate')}, "
+              f"latency={data.get('world_switch_ms')}ms, "
+              f"trust={data.get('trust_score')}")
+        print(f"  [optee_bench] Source: {source}")
+        _PRINTED = True
 
     return data
 

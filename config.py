@@ -144,7 +144,7 @@ GENERATE_SPIDERPP_FULL_EVALUATION = True
 
 # Task count range — extended to 1000 to capture queue-saturation dynamics
 # where contention-awareness becomes the dominant scheduling factor.
-STRESS_TASK_COUNTS = [50, 100, 200, 300, 500, 750, 1000]
+STRESS_TASK_COUNTS = [100, 500, 1000, 2500, 5000, 7500, 10000]
 
 # Default n_tasks for diagnostic graphs (7d, 7e, 7h) that don't sweep tasks
 # but need realistic load. 500 exposes algorithmic differences clearly
