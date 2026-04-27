@@ -1,7 +1,7 @@
 {
-    "poly1305_verify": 0.5940999981248751,
-    "lattice_noise_cancel": 2.9728000081377104,
-    "poly_decode": 1.2968999944860116,
-    "aes_gcm_decrypt": 0.16060000052675605,
-    "total_user_latency": 5.245499996817671
+    "poly1305_verify": 0.15539999003522098,
+    "lattice_noise_cancel": 1.4995999954408035,
+    "poly_decode": 1.162899992777966,
+    "aes_gcm_decrypt": 0.11920000542886555,
+    "total_user_latency": 3.414799997699447
 }
