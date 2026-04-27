@@ -1,4 +1,8 @@
 {
+    "batch_id": "BID-001",
+    "associated_data": "IIoT-DEV-000|1777291961|1IIoT-DEV-001|1777291961|1IIoT-DEV-002|1777291961|1IIoT-DEV-003|1777291961|1IIoT-DEV-004|1777291961|1IIoT-DEV-005|1777291961|1IIoT-DEV-006|1777291961|1IIoT-DEV-007|1777291961|1IIoT-DEV-008|1777291961|1IIoT-DEV-009|1777291961|1",
+    "signature_verified": true,
+    "policy_type": "AND",
     "decrypted_payloads": [
         "{\"sensor_id\": \"IIoT-DEV-000\", \"type\": \"temperature\", \"value\": 98.6, \"unit\": \"F\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-001\", \"type\": \"pressure\", \"value\": 105.2, \"unit\": \"kPa\", \"status\": \"warning\"}",
