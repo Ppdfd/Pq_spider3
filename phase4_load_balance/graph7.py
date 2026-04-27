@@ -755,7 +755,11 @@ def graph7_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, 
     Data source: OP-TEE measured telemetry via load_measurements().
     """
     N_ENCLAVES = 4
-    task_counts = np.array([50, 100, 150, 200, 250, 300])
+    import config
+    # Pulled from config.STRESS_TASK_COUNTS — see config.py Section 7 for
+    # rationale. Stress-test range exposes queue dynamics where Spider++'s
+    # contention-awareness becomes the dominant scheduling factor.
+    task_counts = np.array(config.STRESS_TASK_COUNTS)
     algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
 
     base_enclaves = generate_enclaves(N_ENCLAVES, rng)
@@ -1294,7 +1298,11 @@ def graph7h_enclave_scaling(rng: np.random.Generator, reps: int = 10) -> None:
     the algorithm (Eq 46), not from biased test design.
     """
     n_tasks = 300
-    enclave_counts = np.array([2, 4, 6, 8, 10, 12])
+    import config
+    # Pulled from config.STRESS_ENCLAVE_COUNTS — see config.py Section 7 for
+    # rationale. Extended range showcases Spider++'s parallel batch
+    # decomposition advantage as enclave parallelism increases.
+    enclave_counts = np.array(config.STRESS_ENCLAVE_COUNTS)
     algorithms = ["Round-Robin", "Least-Queue", "Spider++ (Ours)"]
 
     # Style matching IEEE reference

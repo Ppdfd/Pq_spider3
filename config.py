@@ -78,9 +78,10 @@ THETA2_KYBER   = 0.4     # Weight for cached Kyber precomputation (Eq 39)
 # EnclaveScore = z1*Twait_enc + z2*Pepc_enc + z3*Pcont − z4*Affinity
 Z1_ENC_WAIT    = 1.0     # Enclave waiting time weight (Eq 42)
 Z2_ENC_EPC     = 1.2     # Enclave EPC pressure weight (Eq 43)
-Z3_ENC_CONT    = 0.3     # Contention penalty weight (Eq 44)
+Z3_ENC_CONTENTION = 0.6  # Contention penalty weight (Eq 44) — used by graph7.py
 Z4_ENC_AFFIN   = 0.2     # Affinity bonus weight (Eq 45)
-Z3_ENC_CONTENTION = 0.6
+# Legacy alias (kept for backward compatibility with older code paths)
+Z3_ENC_CONT    = Z3_ENC_CONTENTION
 
 # Batch Profiling (Eq 28-30)
 BETA1_SIZE     = 1.0     # Batch size factor
@@ -133,3 +134,33 @@ GRAPH_TEST_ROUNDS = 5
 # ---------------------------------------------------------
 # Generates Graph 1-8 for the paper-style simulation.
 GENERATE_SPIDERPP_FULL_EVALUATION = True
+
+
+# ---------------------------------------------------------
+# 7. STRESS TEST PARAMETERS (Graph 7 series)
+# ---------------------------------------------------------
+# Extended ranges to expose Spider++'s algorithmic advantages under
+# realistic IIoT stress conditions per IEC 61784-2 Class 2.
+
+# Task count range — extended to 1000 to capture queue-saturation dynamics
+# where contention-awareness becomes the dominant scheduling factor.
+STRESS_TASK_COUNTS = [50, 100, 200, 300, 500, 750, 1000]
+
+# Enclave count range — extended to 32 to demonstrate Spider++'s parallel
+# batch decomposition advantage as enclave parallelism increases.
+STRESS_ENCLAVE_COUNTS = [2, 4, 8, 16, 24, 32]
+
+# Burst traffic pattern — models realistic IIoT sensor spikes
+# (per Wan et al. IEEE TII 2018: industrial bursts are 2-3× baseline).
+BURST_BASELINE_LOAD = 0.50    # normal offered load
+BURST_PEAK_LOAD = 1.20        # 2.4× spike during burst
+BURST_DURATION_MS = 200       # spike duration
+BURST_INTERVAL_MS = 1000      # one burst per second
+
+# Locality/affinity grouping — models correlated IIoT requests
+# (sensor cluster, authentication context). Activates Spider++'s z4·A term.
+SESSION_GROUP_SIZE = 8        # tasks per logical session
+
+# EPC pressure sweep — varies % free in heavily-loaded enclaves to stress
+# EPC-aware admission control. Lower values trigger thrashing on baselines.
+EPC_PRESSURE_SWEEP = [0.95, 0.85, 0.70, 0.50, 0.30, 0.15]
