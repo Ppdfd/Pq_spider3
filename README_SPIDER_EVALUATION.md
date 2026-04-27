@@ -8,9 +8,17 @@ This module provides the complete simulation-based evaluation for:
 
 To generate all 15 performance evaluation graphs (Graphs 1-15), run the master graph generator from the project root:
 
+to generate graph
+-python run_all_graphs.py
+to generate test and graph
+-set config.py -> GENERATE_GRAPHS = True
 ```bash
-python run_all_graphs.py
+python run_all_tests.py
 ```
+
+## qemu is write in folder phase4/optee_bench
+host is ree
+ta is tee
 
 This script automatically seeds the random number generators, initializes the directories, and runs all necessary simulation sweeps across the system phases.
 
