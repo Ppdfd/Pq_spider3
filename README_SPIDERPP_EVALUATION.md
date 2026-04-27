@@ -1,31 +1,22 @@
 # Spider++ Full Evaluation Graphs
 
-This update adds a complete simulation-based evaluation module for:
+This module provides the complete simulation-based evaluation for:
 
 **Post-Quantum Secure and Dynamic Load-Balanced Encryption for IIoT Data in Fog Computing (Spider++)**
 
-## Run
+## How to Run
 
-From the project root:
-
-```bash
-python3 run_spiderpp_evaluation.py
-```
-
-or through the full pipeline:
+To generate all 15 performance evaluation graphs (Graphs 1-15), run the master graph generator from the project root:
 
 ```bash
-python3 run_all_tests.py
+python run_all_graphs.py
 ```
 
-`run_all_tests.py` now calls the Spider++ full graph generator when:
-
-```python
-GENERATE_GRAPHS = True
-GENERATE_SPIDERPP_FULL_EVALUATION = True
-```
+This script automatically seeds the random number generators, initializes the directories, and runs all necessary simulation sweeps across the system phases.
 
 ## Generated output
+
+Once complete, the generated graphs will be saved to:
 
 ```text
 graphs/spiderpp_full_evaluation/
@@ -38,13 +29,12 @@ graphs/spiderpp_full_evaluation/
 ├── graph7_recovery_time_failure_rate.png/.pdf
 ├── graph8_intra_node_scheduling.png/.pdf
 ├── graph9_queue_state.png/.pdf
-├── graph10_contention.png/.pdf
-├── graph11_sensitivity.png/.pdf
-├── graph12_epc_availability.png/.pdf
-├── graph13_load_imbalance.png/.pdf
-├── graph14_deadline.png/.pdf
-├── graph15_cache_reuse.png/.pdf
-├── graph16_enclave_scaling.png/.pdf
+├── graph10_sensitivity.png/.pdf
+├── graph11_epc_availability.png/.pdf
+├── graph12_load_imbalance.png/.pdf
+├── graph13_deadline.png/.pdf
+├── graph14_cache_reuse.png/.pdf
+├── graph15_enclave_scaling.png/.pdf
 └── raw/
     └── CSV data for every graph
 ```

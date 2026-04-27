@@ -132,7 +132,7 @@ FLEX_ATTRIBUTES = ["Admin", "Technician", "ZoneB", "Safety"]
 # 5. GRAPHING & BENCHMARKING PARAMETERS
 # ---------------------------------------------------------
 # Set False to skip graph generation for fast simulation-only runs
-GENERATE_GRAPHS = True
+GENERATE_GRAPHS = False
 
 # Axes ranges for scalability benchmarking charts
 GRAPH_FOG_NODES = [10, 20, 30, 40, 50]

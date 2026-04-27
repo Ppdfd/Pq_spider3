@@ -1,88 +1,88 @@
 {
     "node_scoring_per_pkt": [
-        5.216083000050276,
-        4.662458000893821,
-        4.651999999623513,
-        4.666708000513609,
-        4.6319579996634275,
-        8.829333999528899,
-        4.633917000319343,
-        4.676791999372654,
-        5.52724999943166,
-        4.972667000401998
+        10.685700006433763,
+        10.88250000611879,
+        10.88839999283664,
+        10.188799991738051,
+        10.248600010527298,
+        10.493099995073862,
+        10.532600004808046,
+        10.270899991155602,
+        10.07940000272356,
+        10.665800000424497
     ],
     "assignments": [
         {
             "device": "IIoT-DEV-000",
-            "fog_node": 6,
-            "enclave": "E_6_0",
+            "fog_node": 1,
+            "enclave": "E_1_0",
             "node_score": -17.8905,
             "enclave_score": 0
         },
         {
             "device": "IIoT-DEV-001",
+            "fog_node": 3,
+            "enclave": "E_3_0",
+            "node_score": -17.8905,
+            "enclave_score": 0
+        },
+        {
+            "device": "IIoT-DEV-002",
+            "fog_node": 4,
+            "enclave": "E_4_0",
+            "node_score": -17.8905,
+            "enclave_score": 0
+        },
+        {
+            "device": "IIoT-DEV-003",
+            "fog_node": 0,
+            "enclave": "E_0_0",
+            "node_score": -17.825,
+            "enclave_score": 0
+        },
+        {
+            "device": "IIoT-DEV-004",
+            "fog_node": 0,
+            "enclave": "E_0_1",
+            "node_score": -17.7021,
+            "enclave_score": 0
+        },
+        {
+            "device": "IIoT-DEV-005",
+            "fog_node": 8,
+            "enclave": "E_8_0",
+            "node_score": -17.8905,
+            "enclave_score": 0
+        },
+        {
+            "device": "IIoT-DEV-006",
+            "fog_node": 5,
+            "enclave": "E_5_0",
+            "node_score": -17.825,
+            "enclave_score": 0
+        },
+        {
+            "device": "IIoT-DEV-007",
             "fog_node": 9,
             "enclave": "E_9_0",
             "node_score": -17.8905,
             "enclave_score": 0
         },
         {
-            "device": "IIoT-DEV-002",
-            "fog_node": 6,
-            "enclave": "E_6_1",
-            "node_score": -17.7021,
-            "enclave_score": 0
-        },
-        {
-            "device": "IIoT-DEV-003",
-            "fog_node": 6,
-            "enclave": "E_6_2",
+            "device": "IIoT-DEV-008",
+            "fog_node": 0,
+            "enclave": "E_0_2",
             "node_score": -17.5138,
             "enclave_score": 0
         },
         {
-            "device": "IIoT-DEV-004",
-            "fog_node": 9,
-            "enclave": "E_9_1",
-            "node_score": -17.7021,
-            "enclave_score": 0
-        },
-        {
-            "device": "IIoT-DEV-005",
-            "fog_node": 6,
-            "enclave": "E_6_0",
-            "node_score": -17.3255,
-            "enclave_score": 0
-        },
-        {
-            "device": "IIoT-DEV-006",
-            "fog_node": 6,
-            "enclave": "E_6_1",
-            "node_score": -17.1372,
-            "enclave_score": 0
-        },
-        {
-            "device": "IIoT-DEV-007",
-            "fog_node": 0,
-            "enclave": "E_0_0",
-            "node_score": -17.5632,
-            "enclave_score": 0
-        },
-        {
-            "device": "IIoT-DEV-008",
-            "fog_node": 6,
-            "enclave": "E_6_2",
-            "node_score": -16.9489,
-            "enclave_score": 0
-        },
-        {
             "device": "IIoT-DEV-009",
-            "fog_node": 6,
-            "enclave": "E_6_0",
-            "node_score": -16.7605,
+            "fog_node": 0,
+            "enclave": "E_0_3",
+            "node_score": -17.3255,
             "enclave_score": 0
         }
     ],
-    "total_scheduler_latency": 52.51812500137021,
+    "total_scheduler_latency": 105.07910000160336,
     "rejected_count": 0
 }

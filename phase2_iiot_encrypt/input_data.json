@@ -1,0 +1,7 @@
+{
+    "payloads": [
+        "** PACKET 0 FROM JSON ** Sensor reading: 98.6°F",
+        "** PACKET 1 FROM JSON ** Sensor reading: 105°F",
+        "** PACKET 2 FROM JSON ** Emergency shutdown requested"
+    ]
+}

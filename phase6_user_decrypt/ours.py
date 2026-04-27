@@ -125,8 +125,19 @@ def run_phase6_simulation():
     iv = bytes.fromhex(omega["iv"])
     aad = bytes.fromhex(omega["aad"])
     try:
+        import config
         m_agg = aes.decrypt(ct_aes, iv, associated_data=aad)
         print(f"  -> Plaintext recovered ({len(m_agg)} B)")
+        
+        payloads = []
+        chunk_size = config.PAYLOAD_SIZE_BYTES
+        for i in range(0, len(m_agg), chunk_size):
+            chunk = m_agg[i:i+chunk_size]
+            decoded_chunk = chunk.decode("utf-8", errors="ignore").replace("\x00", "")
+            payloads.append(decoded_chunk)
+            
+        loader.save_data(Path(__file__).parent, "plaintext.json", {"decrypted_payloads": payloads})
+        print("  -> Saved full plaintext to phase6_user_decrypt/output/plaintext.json")
     except Exception as e:
         print(f"  ! AES-GCM decrypt failed: {e}")
     t_aes = (time.perf_counter() - t0) * 1000
@@ -146,3 +157,4 @@ def run_phase6_simulation():
 
 if __name__ == "__main__":
     run_phase6_simulation()
+

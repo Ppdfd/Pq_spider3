@@ -78,9 +78,21 @@ def run_phase2_simulation():
             "kg_kem":   bytes.fromhex(d["kg_kem"]),
         }
 
+    # Load custom input data if it exists
+    input_data = []
+    input_file = Path(__file__).parent / "input_data.json"
+    if input_file.exists():
+        with open(input_file, "r") as f:
+            input_data = json.load(f).get("payloads", [])
+
     for i in range(num_devices):
         device_id = f"IIoT-DEV-{i:03d}"
-        base_payload = f"Telemetry Data from {device_id} at {time.time()}".encode()
+        
+        if i < len(input_data):
+            base_payload = str(input_data[i]).encode()
+        else:
+            base_payload = f"Telemetry Data from {device_id} at {time.time()}".encode()
+            
         pad_len = max(0, config.PAYLOAD_SIZE_BYTES - len(base_payload))
         payload = base_payload + b'\0' * pad_len
 
@@ -172,3 +184,5 @@ def run_phase2_simulation():
 
 if __name__ == "__main__":
     run_phase2_simulation()
+
+
