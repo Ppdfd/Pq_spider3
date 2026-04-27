@@ -678,7 +678,13 @@ def execute_on_enclave(
     enc.queue_length = len(enc._finish_times)
     enc.available_ms = finish
     enc.contention = enc.queue_length / max(1.0, enc.service_rate)
-    enc.recent_count += 1
+    # Affinity tracking: count tasks within a sliding "warm cache" window.
+    # Without this cap, recent_count grows unbounded and every enclave
+    # ends up with recent_count > 0, neutralizing the A_affin bonus.
+    # Cap defined in config.ENCLAVE_AFFINITY_WINDOW (default 20).
+    import config
+    affinity_window = getattr(config, 'ENCLAVE_AFFINITY_WINDOW', 20)
+    enc.recent_count = min(affinity_window, enc.recent_count + 1)
 
     return float(finish - arrival)
 
@@ -694,6 +700,9 @@ def _drain_queues(enclaves: List[Enclave], current_ms: float, epc_per_task: floa
     """
     for enc in enclaves:
         if not enc._finish_times:
+            # Idle enclave: cache cools down over time
+            if enc.recent_count > 0:
+                enc.recent_count = max(0, enc.recent_count - 1)
             continue
         # Remove all tasks whose finish time <= current_ms
         before = len(enc._finish_times)
@@ -705,6 +714,8 @@ def _drain_queues(enclaves: List[Enclave], current_ms: float, epc_per_task: floa
             if epc_per_task > 0:
                 enc.epc_available = min(enc.epc_total,
                                         enc.epc_available + completed * epc_per_task)
+            # Cache cools as tasks finish — affinity decays with completions
+            enc.recent_count = max(0, enc.recent_count - completed)
         if enc.queue_length == 0:
             enc.contention = 0.0
             # Update available_ms when fully drained
@@ -727,7 +738,10 @@ def simulate_intra_node(
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
-    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.70)
+    tasks = generate_tasks(
+        n_tasks, base_rng,
+        offered_load=getattr(config, 'INTRA_NODE_OFFERED_LOAD', 0.70),
+    )
     enclaves = clone_enclaves(base_enclaves)
     epc_req = config.PACKET_EPC_BYTES * 28
 
@@ -828,7 +842,10 @@ def simulate_intra_node_detailed(
     base_rng = np.random.default_rng(seed)
     rng = np.random.default_rng(seed + alg_offset)
 
-    tasks = generate_tasks(n_tasks, base_rng, offered_load=0.95)
+    tasks = generate_tasks(
+        n_tasks, base_rng,
+        offered_load=getattr(config, 'INTRA_NODE_OFFERED_LOAD', 0.70),
+    )
     enclaves = clone_enclaves(base_enclaves)
     epc_req = config.PACKET_EPC_BYTES * 28
 
