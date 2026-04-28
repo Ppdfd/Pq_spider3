@@ -180,3 +180,33 @@ INTRA_NODE_OFFERED_LOAD = 0.70
 # "warm cache" bonus. Without this cap, recent_count grows unbounded
 # and every enclave appears equally warm, neutralizing the affinity term.
 ENCLAVE_AFFINITY_WINDOW = 20
+
+# ---------------------------------------------------------
+# 8. PER-GRAPH PARAMETERS
+# ---------------------------------------------------------
+
+# Graph 2: Cache Reuse at Edge Gateway (Sweeps tasks)
+G2_NUM_TASKS = list(range(100, 2100, 100))
+G2_NUM_FOGS = 5
+
+# Graph 3: CP-ABE Encryption Latency at Fog Node
+G3_NUM_TASKS = 20
+
+# Graph 4: User Decryption Latency
+G4_NUM_TASKS = 20
+
+# Graph 5: Load Balancing Latency (Sweeps Number of Fog Nodes)
+G5_NUM_TASKS = 160
+G5_NUM_FOGS = [2, 4, 6, 8, 10, 12]
+
+# Graph 6: Heterogeneous Fog Nodes Load Balancing (Sweeps Number of Fog Nodes)
+G6_NUM_TASKS = 160
+G6_NUM_FOGS = [2, 4, 6, 8, 10, 12]
+
+# Graph 7: Recovery Latency
+G7_NUM_TASKS = 500
+G7_NUM_FOGS = 20
+
+# Graph 8 & 9: Intra-Node Scheduling & Queue State Diagnosis
+G8_NUM_TASKS = 300
+G8_NUM_TEES = 4
