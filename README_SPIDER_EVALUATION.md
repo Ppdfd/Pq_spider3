@@ -17,8 +17,7 @@ python run_all_tests.py
 ```
 
 ## qemu is written in phase4/optee_bench folder
-host is ree
-ta is tee
+The host application runs in the Rich Execution Environment (REE), the Trusted Application (TA) executes inside the Trusted Execution Environment (TEE)
 
 This script automatically seeds the random number generators, initializes the directories, and runs all necessary simulation sweeps across the system phases.
 
