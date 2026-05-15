@@ -16,7 +16,7 @@ to generate test and graph
 python run_all_tests.py
 ```
 
-## qemu is write in folder phase4/optee_bench
+## qemu is written in phase4/optee_bench folder
 host is ree
 ta is tee
 
