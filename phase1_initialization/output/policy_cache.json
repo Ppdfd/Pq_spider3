@@ -3,23 +3,32 @@
         "type": "AND",
         "attributes": [
             "Engineer",
-            "ZoneA"
+            "ZoneA",
+            "Safety"
         ]
     },
     "policy_pkg": {
         "M": [
             [
                 1,
+                1,
+                0
+            ],
+            [
+                0,
+                -1,
                 1
             ],
             [
+                0,
                 0,
                 -1
             ]
         ],
         "rho": [
             "Engineer",
-            "ZoneA"
+            "ZoneA",
+            "Safety"
         ],
         "tree": {
             "op": "AND",
@@ -29,6 +38,9 @@
                 },
                 {
                     "attr": "ZoneA"
+                },
+                {
+                    "attr": "Safety"
                 }
             ]
         },
@@ -36,7 +48,8 @@
             "type": "AND",
             "attributes": [
                 "Engineer",
-                "ZoneA"
+                "ZoneA",
+                "Safety"
             ]
         }
     },
@@ -44,23 +57,32 @@
         "type": "AND",
         "attributes": [
             "516",
-            "1733"
+            "1733",
+            "500"
         ]
     },
     "t_id_pkg": {
         "M": [
             [
                 1,
+                1,
+                0
+            ],
+            [
+                0,
+                -1,
                 1
             ],
             [
+                0,
                 0,
                 -1
             ]
         ],
         "rho": [
             "516",
-            "1733"
+            "1733",
+            "500"
         ],
         "tree": {
             "op": "AND",
@@ -70,6 +92,9 @@
                 },
                 {
                     "attr": "1733"
+                },
+                {
+                    "attr": "500"
                 }
             ]
         },
@@ -77,7 +102,8 @@
             "type": "AND",
             "attributes": [
                 "516",
-                "1733"
+                "1733",
+                "500"
             ]
         }
     }

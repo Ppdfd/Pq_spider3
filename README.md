@@ -1,97 +1,119 @@
 # PQ-SPIDER Evaluation Framework
-
 **Post-Quantum Secure and Dynamic Load-Balanced Encryption for IIoT Data in Fog Computing (Spider)**
-
 This repository contains the simulation and evaluation framework for the PQ-SPIDER architecture. It models a complete end-to-end IIoT data pipeline, comparing our proposed approach ("Spider") against state-of-the-art reference implementations (Ref [4], Ref [37], Ref [39]).
 
-The simulation correctly models queue buildup, cryptographic service times, cache locality, network jitter, TEE/REE split execution overheads, and EPC (Enclave Page Cache) pressure to provide accurate performance metrics.
-
 ---
-
-## 🏗️ Architecture & Phases
-
-The pipeline is divided into 6 discrete phases that simulate the journey of data from IIoT sensors to the end user:
-
-1. **Phase 1: Initialization** (`phase1_initialization/`)
-   - Generates cryptographic keys for IIoT devices, edge gateways, fog nodes, and users.
-   - Bootstraps the CP-ABE (Ciphertext-Policy Attribute-Based Encryption) universe and TEE environments.
-2. **Phase 2: IIoT Encrypt** (`phase2_iiot_encrypt/`)
-   - Sensors encrypt telemetry using Post-Quantum symmetric/asymmetric primitives (e.g., Kyber, ChaCha20) and sign payloads.
-3. **Phase 3: Edge Gateway** (`phase3_edge_gateway/`)
-   - Validates signatures and aggregates data from multiple sensors.
-4. **Phase 4: Load Balance** (`phase4_load_balance/`)
-   - Our proposed dynamic load balancer. Distributes work across heterogeneous fog nodes.
-   - Factors in queue wait times, CPU contention, hardware capabilities, cache affinity, and TEE EPC memory limits.
-5. **Phase 5: Fog Node Processing** (`phase5_fog_node/`)
-   - Fog nodes decrypt the IIoT payload inside the TEE and re-encrypt the data using CP-ABE for fine-grained access control before storing/forwarding.
-6. **Phase 6: User Decrypt** (`phase6_user_decrypt/`)
-   - The end user fetches the data and decrypts it using their CP-ABE secret keys.
-
----
-
-## 🚀 How to Run
-
-You can run the framework in two primary modes: **Testing (Profiling)** and **Graph Generation**.
-
-### 1. Run the Full Pipeline (Tests & Profiling)
-
-To execute all 6 phases sequentially, generate data, and profile resource usage (CPU time, Peak RSS Memory, Wall time):
+## How to Run
+### Run Everything (Tests + Graphs)
+Set `GENERATE_GRAPHS = True` in `config.py`, then:
 
 ```bash
 python run_all_tests.py
 ```
+This runs the full 6-phase pipeline, profiles resource usage, and automatically generates all graphs at the end.
 
-**What happens?**
-- The script runs `main.py` inside each phase directory.
-- It tests "Ours" against all relevant reference implementations.
-- Intermediate simulation data (keys, ciphertexts) are stored in `{phase_dir}/output/`.
-- Latency and resource metrics are stored in `{phase_dir}/results/`.
-- A consolidated resource usage table is printed at the end.
+### Run Tests Only (No Graphs)
+Set `GENERATE_GRAPHS = False` in `config.py`, then:
 
-### 2. Generate Evaluation Graphs
+```bash
+python run_all_tests.py
+```
+This runs all 6 phases and prints latency and resource usage tables, but skips graph generation for a faster run.
 
-To generate the IEEE-formatted publication-ready graphs:
-
+### Run Graphs Only
 ```bash
 python run_all_graphs.py
 ```
+This generates all 9 graphs (Graph 1-9) using the `graphs/` scripts. Outputs are saved to `graphs/spider_full_evaluation/` as `.png` files, with raw `.csv` data in the `raw/` subdirectory.
 
-**What happens?**
-- This orchestrates the scripts located in the `graphs/` directory.
-- Graphs evaluate scalability, node heterogeneity, cache-reuse, scheduling, queue lengths, and EPC pressure.
-- Outputs are saved to: `graphs/spider_full_evaluation/` (as `.png` files) along with raw `.csv` data dumps in the `raw/` subdirectory for auditing.
-
-*Note: You can control whether `run_all_tests.py` also generates graphs by toggling the `GENERATE_GRAPHS` flag in `config.py`.*
+> **Note**: Graph scripts do NOT depend on previously generated test data. They run their own internal simulations.
 
 ---
 
-## ⚙️ Configuration (`config.py`)
+## Run a Single Phase Test
 
-The `config.py` file acts as the single source of truth for the simulation's mathematical model and experimental parameters.
+Each phase has its own `main.py` that can be run independently. Phases are sequential, so earlier phases must be run first to generate the data files that later phases consume.
 
-### Key Sections:
+```bash
+# Phase 1: System Initialization (generates keys, fog nodes, device registry)
+python phase1_initialization/main.py
 
-- **1. LATENCY & SYSTEM CONSTANTS**: 
-  - Network latencies (`L_ij`, `L_jk`, `L_ku`), packet routing times, and baseline OP-TEE context switch overheads (`MEASURED_WORLD_SWITCH_MS`).
-- **2. TEE & EPC METRICS**:
-  - Constants for Enclave Page Cache penalties (`EPC_BASE_PENALTY_MS`), memory ceilings (`EPC_MAX_MEMORY_MB`), and the threshold for triggering admission control (`EPC_PRESSURE_TAU`).
-- **3. LOAD BALANCER WEIGHTS**:
-  - `W1_WAIT`: Weight for queue wait time in scheduling.
-  - `Z2_ENC_EPC`: EPC penalty weight.
-  - `Z3_ENC_CONTENTION`: Secondary contention factor.
-  - `Z4_ENC_AFFIN`: Cache warmth/affinity bonus.
-- **4. DATA SIZES & CRYPTO**:
-  - Defines the simulated payload sizes (`PAYLOAD_SIZE_BYTES = 256`), GCM tag sizes, and the CP-ABE attribute universe.
-- **6. GRAPH GENERATION**:
-  - Defines the boolean flag `GENERATE_SPIDER_FULL_EVALUATION` to enable the heavy simulation loops for graph plotting.
+# Phase 2: IIoT Device Encryption (requires Phase 1 output)
+python phase2_iiot_encrypt/main.py
 
-If you wish to change the size of the simulated IIoT batches or alter the behavior of the load balancer's cost function (e.g., to see how ignoring cache affinity impacts latency), modify the respective variables in `config.py`.
+# Phase 3: Edge Gateway Validation (requires Phase 2 output)
+python phase3_edge_gateway/main.py
+
+# Phase 4: Load Balancing (requires Phase 3 output)
+python phase4_load_balance/main.py
+
+# Phase 5: Fog Node Processing (requires Phase 4 output)
+python phase5_fog_node/main.py
+
+# Phase 6: User Decryption (requires Phase 5 output)
+python phase6_user_decrypt/main.py
+```
+
+Each phase compares "Ours" vs "Ref [4]" and prints a comparison table. Metrics are saved to `{phase}/results/` and intermediate data to `{phase}/output/`.
 
 ---
 
-## 📊 Outputs & Data Persistence
+## Run a Single Graph
 
-The project is designed to be modular. A phase cannot run unless the preceding phase has completed, as they rely on the artifacts written to disk via the `DataLoader` utility.
+You can run individual graph scripts directly from the project root:
 
-- **`{phase}/output/*.json`**: Contains the raw, deterministic "mock" payloads, keys, and batch configurations passed between phases.
-- **`{phase}/results/*_metrics.json`**: Contains the profiled timings (latency breakdowns) for that specific phase, which the graphing scripts consume to plot comparative baselines.
+```bash
+python -c "from utils.eval_utils import *; from graphs.graph1 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph1_setup_phase(rng)"
+```
+
+For convenience, here is the command for each graph:
+
+| Graph | What It Measures | Command |
+|-------|-----------------|---------|
+| Graph 1 | CP-ABE Setup Latency vs Attributes | `python -c "from utils.eval_utils import *; from graphs.graph1 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph1_setup_phase(rng)"` |
+| Graph 2 | Cache Reuse Scheduling Latency | `python -c "from utils.eval_utils import *; from graphs.graph2 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph2_cache_reuse(rng)"` |
+| Graph 3 | CP-ABE Encryption Cost at Fog | `python -c "from utils.eval_utils import *; from graphs.graph3 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph3_cpabe_encryption(rng)"` |
+| Graph 4 | CP-ABE Decryption Cost at User | `python -c "from utils.eval_utils import *; from graphs.graph4 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph4_cpabe_decryption(rng)"` |
+| Graph 5 | Load Balancing (Homogeneous) | `python -c "from utils.eval_utils import *; from graphs.graph5 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph_load_balancing(rng, 5, False)"` |
+| Graph 6 | Load Balancing (Heterogeneous) | `python -c "from utils.eval_utils import *; from graphs.graph6 import *; ensure_dirs(); configure_matplotlib(); graph6_heterogeneous_fog()"` |
+| Graph 7 | Recovery Time vs Failure Rate | `python -c "from utils.eval_utils import *; from graphs.graph7 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph7_recovery(rng)"` |
+| Graph 8 | Intra-Node Enclave Scheduling | `python -c "from utils.eval_utils import *; from graphs.graph8 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); graph8_intra_enclave(rng)"` |
+| Graph 9 | Routing Intelligence (uses Graph 8 data) | `python -c "from utils.eval_utils import *; from graphs.graph8 import *; from graphs.graph9 import *; rng=set_global_seed(GLOBAL_SEED); ensure_dirs(); configure_matplotlib(); r,e=run_graph8_experiment(rng); graph9_queue_state(r,e)"` |
+
+All graph outputs are saved to `graphs/spider_full_evaluation/`.
+
+---
+
+## Configuration (`config.py`)
+
+All simulation parameters are controlled from `config.py`. Key sections:
+
+| Section | What It Controls |
+|---------|-----------------|
+| **1. Global Topology** | Number of fog nodes (`NUM_GLOBAL_NODES`) and devices (`NUM_DEVICES`) |
+| **2. Hardware Constraints** | TEE memory budget (`EPC_BUDGET_BYTES`), enclaves per node (`ENC_PER_NODE`) |
+| **3. OP-TEE Measured Values** | Service rate, world-switch latency, trust score from QEMU benchmarks |
+| **4. Spider Load Balancer Weights** | All `W1`-`W8`, `Z1`-`Z4` weights for the scheduling cost function |
+| **5. Data Sizes & Cryptography** | Payload size, CP-ABE attribute universe, user attributes |
+| **6. Graph Control** | `GENERATE_GRAPHS` flag, offered load, affinity window |
+| **7. Per-Graph Parameters** | `G1_*` through `G8_*` keys that control each graph's axes and sweep ranges |
+
+### Example: Change graph resolution
+
+To make Graph 1 run faster with fewer data points:
+```python
+# In config.py
+G1_ATTR_RANGE = [5, 15, 25, 35, 45]  # fewer x-axis points
+G1_REPS = 3                           # fewer repetitions
+```
+
+---
+
+## Output Structure
+
+```
+{phase}/output/     -> Intermediate data (keys, ciphertexts, schedules)
+{phase}/results/    -> Latency metrics JSON files
+graphs/spider_full_evaluation/     -> Generated .png graphs
+graphs/spider_full_evaluation/raw/ -> Raw .csv data dumps
+```

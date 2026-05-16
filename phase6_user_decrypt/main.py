@@ -10,13 +10,6 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from phase1_initialization.ours   import run_phase1_simulation
-from phase1_initialization.ref_4  import run_phase1_ref4
-from phase2_iiot_encrypt.ours   import run_phase2_simulation
-from phase2_iiot_encrypt.ref_4  import run_phase2_ref4
-from phase3_edge_gateway.ours import run_phase3_simulation
-from phase5_fog_node.ours   import run_phase5_simulation
-from phase5_fog_node.ref_4  import run_phase5_ref4
 from phase6_user_decrypt.ours   import run_phase6_simulation
 from phase6_user_decrypt.ref_4  import run_phase6_ref4
 

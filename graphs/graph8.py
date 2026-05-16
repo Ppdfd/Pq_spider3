@@ -123,7 +123,7 @@ def graph8_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, 
     N_ENCLAVES = getattr(config, 'G8_NUM_TEES', 4)
     n_tasks = getattr(config, 'G8_NUM_TASKS', 500)
 
-    spread_factors = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0])
+    spread_factors = np.array(getattr(config, 'G8_SPREAD_FACTORS', [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]))
     algorithms = ["Round-Robin", "Least-Queue", "Spider (Ours)"]
 
     measurements = load_measurements(config)

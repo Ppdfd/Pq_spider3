@@ -28,7 +28,7 @@ def graph4_cpabe_decryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
     from crypto_primitives.cp_abe import LatticeCPABE
     import config
 
-    attrs = np.arange(5, 55, 5)
+    attrs = np.array(getattr(config, 'G4_ATTR_RANGE', list(range(5, 55, 5))))
     N_BATCH = getattr(config, 'G4_NUM_TASKS', 20)
 
     ours_runs: List[np.ndarray] = []

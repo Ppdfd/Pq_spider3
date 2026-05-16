@@ -1,8 +1,8 @@
 {
     "payloads": [
-        "{\"sensor_id\": \"IIoT-DEV-000\", \"type\": \"temperature\", \"value\": 98.6, \"unit\": \"F\", \"status\": \"nominal\"}",
-        "{\"sensor_id\": \"IIoT-DEV-001\", \"type\": \"pressure\", \"value\": 105.2, \"unit\": \"kPa\", \"status\": \"warning\"}",
-        "{\"sensor_id\": \"IIoT-DEV-002\", \"type\": \"humidity\", \"value\": 45.0, \"unit\": \"%\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-000\", \"type\": \"temperature\", \"value\": 100.0, \"unit\": \"F\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-001\", \"type\": \"pressure\", \"value\": 105.2, \"unit\": \"kPa\", \"status\": \"normal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-002\", \"type\": \"humidity\", \"value\": 50.0, \"unit\": \"%\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-003\", \"type\": \"vibration\", \"value\": 0.02, \"unit\": \"mm/s\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-004\", \"type\": \"voltage\", \"value\": 220.1, \"unit\": \"V\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-005\", \"type\": \"current\", \"value\": 15.4, \"unit\": \"A\", \"status\": \"nominal\"}",

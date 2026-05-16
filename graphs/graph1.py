@@ -7,7 +7,7 @@ from utils.eval_utils import (
     GLOBAL_SEED, summarize_runs, save_csv, plot_lines, RAW_DIR
 )
 
-def graph1_setup_phase(rng: np.random.Generator, reps: int = 15) -> Dict[str, np.ndarray]:
+def graph1_setup_phase(rng: np.random.Generator, reps: int = None) -> Dict[str, np.ndarray]:
     """
     Graph 1: CP-ABE Setup Latency vs Number of Attributes.
 
@@ -33,7 +33,10 @@ def graph1_setup_phase(rng: np.random.Generator, reps: int = 15) -> Dict[str, np
         N_RING, Q_MOD, SIGMA_GAUSS,
     )
 
-    attrs = np.arange(5, 55, 5)
+    import config
+    if reps is None:
+        reps = getattr(config, 'G1_REPS', 15)
+    attrs = np.array(getattr(config, 'G1_ATTR_RANGE', list(range(5, 55, 5))))
 
     ours_runs: List[np.ndarray] = []
     ref4_runs: List[np.ndarray] = []

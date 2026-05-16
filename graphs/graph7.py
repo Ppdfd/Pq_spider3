@@ -56,7 +56,8 @@ def simulate_recovery_time(failure_rate: float, method: str, seed: int) -> float
 def graph7_recovery(rng: np.random.Generator, reps: int = 5) -> Dict[str, np.ndarray]:
     """Graph 7: Recovery Time vs Failure Rate (line chart)."""
 
-    rates = np.array([5, 10, 15, 20, 25, 30, 35, 40])
+    import config
+    rates = np.array(getattr(config, 'G7_FAILURE_RATES', [5, 10, 15, 20, 25, 30, 35, 40]))
     methods = [
         "No Delegation",
         "Simple Retry / Reassignment",

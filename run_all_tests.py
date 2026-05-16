@@ -236,12 +236,11 @@ def main():
         print("#" * 70 + "\n")
 
         # Generate the complete paper-style Spider evaluation graph set:
-        if getattr(config, "GENERATE_SPIDER_FULL_EVALUATION", True):
-            try:
-                from run_all_graphs import run_all_graphs as run_spider_full_graphs
-                run_spider_full_graphs()
-            except Exception as exc:
-                print(f"[WARN] Spider full evaluation graph generation failed: {exc}")
+        try:
+            from run_all_graphs import run_all_graphs as run_spider_full_graphs
+            run_spider_full_graphs()
+        except Exception as exc:
+            print(f"[WARN] Spider full evaluation graph generation failed: {exc}")
 
     # ═══════════════════════════════════════════════════════════
     # Summaries
