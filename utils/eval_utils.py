@@ -112,8 +112,6 @@ SCHEME_STYLES = {
     "Spider Reuse-Aware Cache (Ours)": {"color": "#1A73E8", "marker": "o"},
     "Spider Secure Task Delegation (Ours)": {"color": "#1A73E8", "marker": "o"},
     "Ref[4]": {"color": "#E8710A", "marker": "s"},
-    "Ref[35]": {"color": "#34A853", "marker": "^"},
-    "Ref[36]": {"color": "#EA4335", "marker": "D"},
     "Ref[22]": {"color": "#E8710A", "marker": "s"},
     "Ref[37]": {"color": "#34A853", "marker": "^"},
     "Ref[39]": {"color": "#EA4335", "marker": "D"},

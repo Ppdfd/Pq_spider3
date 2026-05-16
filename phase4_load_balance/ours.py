@@ -209,7 +209,7 @@ def run_phase4_simulation():
     profile = batch_profile(packets)
     metrics["batch_profiling"] = (time.perf_counter() - t0) * 1000
     print(f"  -> Batch profile: S_k={profile['S_k']}, "
-          f"ω_k={profile['omega_k']:.1f}, η_k={profile['eta_k']:.2f}")
+          f"omega_k={profile['omega_k']:.1f}, eta_k={profile['eta_k']:.2f}")
 
     # ── Pre-compute STATIC score components (once per batch) ──
     # These values don't change between packet assignments:

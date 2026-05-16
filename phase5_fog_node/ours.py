@@ -150,7 +150,7 @@ def run_phase5_simulation():
         aggregated_plaintexts.append(pt)
     t_decrypt = (time.perf_counter() - t_dec_start) * 1000
     metrics["enclave_decrypt"] = t_decrypt
-    print(f"  -> Enclave decrypt × {len(packets)}: {t_decrypt:.2f} ms")
+    print(f"  -> Enclave decrypt x {len(packets)}: {t_decrypt:.2f} ms")
 
     # Eq 57-60: Aggregation
     m_agg   = b"".join(aggregated_plaintexts)

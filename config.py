@@ -126,6 +126,7 @@ GCM_MAC_SIZE = 16
 # Attribute Universe for CP-ABE
 CP_ABE_UNIVERSE = ["Admin", "Engineer", "Technician", "ZoneA", "ZoneB", "Safety"]
 USER_ATTRIBUTES = ["Engineer", "ZoneA"]
+#(reference [4])
 FLEX_ATTRIBUTES = ["Admin", "Technician", "ZoneB", "Safety"]
 
 # ---------------------------------------------------------
@@ -143,7 +144,6 @@ GRAPH_TEE_COUNTS = [1, 2, 4, 8]
 # Multi-round validation to flush CPU caches and calculate a true average
 GRAPH_WARMUP_ROUNDS = 1
 GRAPH_TEST_ROUNDS = 5
-
 
 # ---------------------------------------------------------
 # 6. SPIDER++ FULL PAPER EVALUATION GRAPHS

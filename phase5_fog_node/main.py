@@ -12,17 +12,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from phase1_initialization.ours   import run_phase1_simulation
 from phase1_initialization.ref_4  import run_phase1_ref4
-from phase1_initialization.ref_35 import run_phase1_ref35
-from phase1_initialization.ref_36 import run_phase1_ref36
 from phase2_iiot_encrypt.ours   import run_phase2_simulation
 from phase2_iiot_encrypt.ref_4  import run_phase2_ref4
-from phase2_iiot_encrypt.ref_35 import run_phase2_ref35
-from phase2_iiot_encrypt.ref_36 import run_phase2_ref36
 from phase3_edge_gateway.ours import run_phase3_simulation
 from phase5_fog_node.ours   import run_phase5_simulation
 from phase5_fog_node.ref_4  import run_phase5_ref4
-from phase5_fog_node.ref_35 import run_phase5_ref35
-from phase5_fog_node.ref_36 import run_phase5_ref36
 
 from utils.dataset_loader import DataLoader
 import config
@@ -38,16 +32,12 @@ def main():
     print()
     run_phase5_ref4()
     print()
-    run_phase5_ref35()
-    print()
-    run_phase5_ref36()
-    print()
+
 
     loader = DataLoader()
     ours = loader.load_metrics(phase_dir, "ours_metrics.json")
     r4   = loader.load_metrics(phase_dir, "ref4_metrics.json")
-    r35  = loader.load_metrics(phase_dir, "ref35_metrics.json")
-    r36  = loader.load_metrics(phase_dir, "ref36_metrics.json")
+
 
     print("\n" + "=" * 78)
     print("  PHASE 5 COMPARISON — Total fog-side latency per batch (ms)")
@@ -56,9 +46,7 @@ def main():
     print("-" * 78)
     rows = [
         ("Ours",            ours, "Batch + CP-ABE + Dilithium"),
-        ("Ref[4] Poomekum", r4,   "β augment + Dilithium"),
-        ("Ref[35] Zaheer",  r35,  "Kyber decap + Dilithium"),
-        ("Ref[36] Man",     r36,  "Passthrough only"),
+        ("Ref[4] Poomekum", r4,   "beta augment + Dilithium"),
     ]
     for name, m, descr in rows:
         val = m.get("total_fog_latency", 0)

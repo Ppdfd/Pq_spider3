@@ -12,21 +12,13 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from phase1_initialization.ours   import run_phase1_simulation
 from phase1_initialization.ref_4  import run_phase1_ref4
-from phase1_initialization.ref_35 import run_phase1_ref35
-from phase1_initialization.ref_36 import run_phase1_ref36
 from phase2_iiot_encrypt.ours   import run_phase2_simulation
 from phase2_iiot_encrypt.ref_4  import run_phase2_ref4
-from phase2_iiot_encrypt.ref_35 import run_phase2_ref35
-from phase2_iiot_encrypt.ref_36 import run_phase2_ref36
 from phase3_edge_gateway.ours import run_phase3_simulation
 from phase5_fog_node.ours   import run_phase5_simulation
 from phase5_fog_node.ref_4  import run_phase5_ref4
-from phase5_fog_node.ref_35 import run_phase5_ref35
-from phase5_fog_node.ref_36 import run_phase5_ref36
 from phase6_user_decrypt.ours   import run_phase6_simulation
 from phase6_user_decrypt.ref_4  import run_phase6_ref4
-from phase6_user_decrypt.ref_35 import run_phase6_ref35
-from phase6_user_decrypt.ref_36 import run_phase6_ref36
 
 from utils.dataset_loader import DataLoader
 import config
@@ -42,16 +34,12 @@ def main():
     print()
     run_phase6_ref4()
     print()
-    run_phase6_ref35()
-    print()
-    run_phase6_ref36()
-    print()
+
 
     loader = DataLoader()
     ours = loader.load_metrics(phase_dir, "ours_metrics.json")
     r4   = loader.load_metrics(phase_dir, "ref4_metrics.json")
-    r35  = loader.load_metrics(phase_dir, "ref35_metrics.json")
-    r36  = loader.load_metrics(phase_dir, "ref36_metrics.json")
+
 
     print("\n" + "=" * 78)
     print("  PHASE 6 COMPARISON — Total user-side latency (ms)")
@@ -61,8 +49,6 @@ def main():
     rows = [
         ("Ours",            ours, "Dilithium + CP-ABE + AES"),
         ("Ref[4] Poomekum", r4,   "Poly1305 + noise cancel + AES"),
-        ("Ref[35] Zaheer",  r35,  "Dilithium + Kyber decap + AES"),
-        ("Ref[36] Man",     r36,  "INTT poly + reverse Z-order"),
     ]
     for name, m, descr in rows:
         val = m.get("total_user_latency", 0)

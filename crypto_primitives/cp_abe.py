@@ -344,58 +344,6 @@ def authorized_row_set(M: np.ndarray, rho: List[str],
 #     t_j ∈ Z_q^n small  (secret)
 #     u_j = A · t_j  mod q    (public, in Z_q^n)
 
-def _regev_encrypt_bit(A: np.ndarray, u_j: np.ndarray,
-                       bit: int, q: int) -> Tuple[np.ndarray, int]:
-    n = A.shape[0]
-    r  = _small_vec(n, q)
-    e1 = _small_vec(n, q)
-    e2 = _small_scalar(q)
-    c1 = (A.dot(r) + e1) % q                                    # n-dim
-    c2 = (int(u_j.dot(r) % q) + e2 + bit * (q // 2)) % q        # scalar
-    return c1, c2
-
-
-def _regev_decrypt_bit(t_j: np.ndarray, c1: np.ndarray,
-                       c2: int, q: int) -> int:
-    val = (int(c2) - int(t_j.dot(c1) % q)) % q
-    return _decode_bit(val, q)
-
-
-# ─────────── Vectorized batch operations ────────────────────────────
-
-def _regev_encrypt_batch(A: np.ndarray, u_j: np.ndarray,
-                         share_bits: np.ndarray, q: int
-                         ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    BLAS-accelerated Regev encryption for B bits at once.
-    Uses float64 matmul (BLAS) then reduces mod q.
-    share_bits: 1-D array of length B (0/1 values).
-    Returns:
-        C1: (B, n) int64 matrix — one c1 vector per bit
-        C2: (B,)   int64 array  — one c2 scalar per bit
-    """
-    n = A.shape[0]
-    B = len(share_bits)
-    # Sample all randomness in one shot
-    R  = np.random.randint(-NOISE_BOUND, NOISE_BOUND + 1,
-                           size=(n, B), dtype=np.int64)
-    E1 = np.random.randint(-NOISE_BOUND, NOISE_BOUND + 1,
-                           size=(n, B), dtype=np.int64)
-    E2 = np.random.randint(-NOISE_BOUND, NOISE_BOUND + 1,
-                           size=B, dtype=np.int64)
-
-    # BLAS-accelerated matmul via float64 (int64 matmul has no BLAS path)
-    # Values are bounded: A entries < q=3329, R entries ∈ {-1,0,1},
-    # so max intermediate < 3329 * n ≈ 852K — well within float64 precision.
-    A_f = A.astype(np.float64)
-    R_f = R.astype(np.float64)
-    u_f = u_j.astype(np.float64)
-
-    C1 = (np.rint(A_f @ R_f).astype(np.int64) + E1) % q          # (n, B)
-    C2 = (np.rint(u_f @ R_f).astype(np.int64) + E2
-          + share_bits * (q // 2)) % q                             # (B,)
-
-    return C1.T, C2     # C1: (B, n),  C2: (B,)
 
 
 def _regev_decrypt_batch(t_j: np.ndarray, C1: np.ndarray,

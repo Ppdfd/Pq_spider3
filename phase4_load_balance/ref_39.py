@@ -205,7 +205,7 @@ def run_phase4_ref39():
     num_nodes = len(fog_nodes)
     print(f"  -> Scheduling {len(packets)} packets across "
           f"{num_nodes} fog nodes (DIST: distributed Q-learning, "
-          f"α={ALPHA_LR}, γ={GAMMA_DISC}, "
+          f"alpha={ALPHA_LR}, gamma={GAMMA_DISC}, "
           f"R={NUM_ROUNDS}, I={NUM_ITERS}).")
 
     metrics = {
@@ -279,8 +279,8 @@ def run_phase4_ref39():
     avg_node = (sum(metrics["node_scoring_per_pkt"])
                 / max(1, len(packets)))
     print(f"\n  DIST Q-learning scoring (avg/pkt): {avg_node:.4f} ms")
-    print(f"  Hyperparameters: α={ALPHA_LR}, γ={GAMMA_DISC}, "
-          f"ε={EPSILON_START}→{EPSILON_END} (decay={EPSILON_DECAY})")
+    print(f"  Hyperparameters: alpha={ALPHA_LR}, gamma={GAMMA_DISC}, "
+          f"epsilon={EPSILON_START}->{EPSILON_END} (decay={EPSILON_DECAY})")
     print(f"  DVFS levels: {DVFS_LEVELS}")
     print(f"  Assignments: {len(metrics['assignments'])} / "
           f"Rejected: {metrics['rejected_count']}")

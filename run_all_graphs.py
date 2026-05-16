@@ -30,10 +30,10 @@ def run_all_graphs():
     graph2_cache_reuse(rng)
     print("  ✓ Graph 2 generated (phase3)")
 
-    #graph3_cpabe_encryption(rng)
+    graph3_cpabe_encryption(rng)
     print("  ✓ Graph 3 generated (phase5)")
 
-    #graph4_cpabe_decryption(rng)
+    graph4_cpabe_decryption(rng)
     print("  ✓ Graph 4 generated (phase6)")
 
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
@@ -51,7 +51,7 @@ def run_all_graphs():
 
     # ── Single experiment for all diagnostic views (9, 11, 12, 13, 14) ──
     results, enclaves = run_graph8_experiment(rng)
-    print("  ✓ Graph 8 experiment complete (1 run × 3 algorithms)")
+    print("  ✓ Graph 8 experiment complete (1 run x 3 algorithms)")
 
     graph9_queue_state(results, enclaves)
     print("  ✓ Graph 9 generated (routing intelligence)")

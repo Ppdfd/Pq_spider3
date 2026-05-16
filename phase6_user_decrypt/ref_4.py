@@ -146,7 +146,7 @@ def run_phase6_ref4():
         assert ok, f"Poly1305 verify failed on {r['device_id']}"
     t_poly = (time.perf_counter() - t0) * 1000
     metrics["poly1305_verify"] = t_poly
-    print(f"[1/3] Poly1305 verify × {len(pre)}: {t_poly:.2f} ms")
+    print(f"[1/3] Poly1305 verify x {len(pre)}: {t_poly:.2f} ms")
 
     # ── Step 2: Lattice noise cancellation × N ──
     # C_r_stripped = m·⌊q/2⌋ + B_epoch·r + Σ(B_i·r) + e_r
@@ -167,7 +167,7 @@ def run_phase6_ref4():
         cancelled_polys.append(m_prime)
     t_cancel = (time.perf_counter() - t0) * 1000
     metrics["lattice_noise_cancel"] = t_cancel
-    print(f"[2/3] Noise cancel × {len(pre)}: {t_cancel:.2f} ms")
+    print(f"[2/3] Noise cancel x {len(pre)}: {t_cancel:.2f} ms")
 
     # ── Step 3: Poly decode + AES-GCM decrypt × N ──
     t0 = time.perf_counter()
@@ -189,7 +189,7 @@ def run_phase6_ref4():
     t_aes = (time.perf_counter() - t0) * 1000
     metrics["aes_gcm_decrypt"] = t_aes
     print(f"[3/3] Poly decode: {t_decode:.2f} ms, "
-          f"AES-GCM decrypt × {len(pre)}: {t_aes:.2f} ms "
+          f"AES-GCM decrypt x {len(pre)}: {t_aes:.2f} ms "
           f"(recovered={recovered_count}, tag-failed={failed_count})")
 
     metrics["total_user_latency"] = (time.perf_counter() - start_total) * 1000

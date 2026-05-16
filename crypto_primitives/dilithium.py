@@ -691,16 +691,6 @@ def _sig_from_bytes(buf):
     return {'c_seed': c_seed, 'z': z, 'h': h}
 
 
-def _pk_to_bytes(pk_data):
-    return pk_data['rho'] + _pack_t1(pk_data['t1'])
-
-
-def _sk_to_bytes(sk_data):
-    buf = sk_data['rho'] + sk_data['sigma'] + sk_data['pk_hash']
-    buf += _pack_poly_list(sk_data['s1'])
-    buf += _pack_poly_list(sk_data['s2'])
-    buf += _pack_poly_list(sk_data['t0'])
-    return buf
 
 
 # ═══════════════════ Public API ═════════════════════════════════════

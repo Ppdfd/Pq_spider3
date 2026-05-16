@@ -28,14 +28,13 @@ from phase5_fog_node       import main as phase5_main
 from phase6_user_decrypt   import main as phase6_main
 
 from utils.dataset_loader import DataLoader
-from utils.resource_profiler import profile_phase, format_resource_table
+from utils.resource_profiler import profile_phase
 
 
 SCHEMES = [
     ("Ours",            "ours_metrics.json"),
     ("Ref[4] Poomekum", "ref4_metrics.json"),
-    ("Ref[35] Zaheer",  "ref35_metrics.json"),
-    ("Ref[36] Man",     "ref36_metrics.json"),
+
 ]
 
 # Tagged which phases are cross-scheme comparable.
@@ -133,7 +132,7 @@ def grand_summary():
 
 def main():
     print("\n" + "#" * 70)
-    print("#  PQ-SPIDER  FULL 6-PHASE EVALUATION  (Ours vs [4], [35], [36])    #")
+    print("#  PQ-SPIDER  FULL 6-PHASE EVALUATION  (Ours vs [4])                #")
     print("#" * 70)
 
     import io, contextlib
@@ -141,13 +140,9 @@ def main():
     # Import all individual scheme runners
     from phase1_initialization.ours import run_phase1_simulation
     from phase1_initialization.ref_4 import run_phase1_ref4
-    from phase1_initialization.ref_35 import run_phase1_ref35
-    from phase1_initialization.ref_36 import run_phase1_ref36
 
     from phase2_iiot_encrypt.ours import run_phase2_simulation
     from phase2_iiot_encrypt.ref_4 import run_phase2_ref4
-    from phase2_iiot_encrypt.ref_35 import run_phase2_ref35
-    from phase2_iiot_encrypt.ref_36 import run_phase2_ref36
 
     from phase3_edge_gateway.ours import run_phase3_simulation
 
@@ -158,13 +153,9 @@ def main():
 
     from phase5_fog_node.ours import run_phase5_simulation
     from phase5_fog_node.ref_4 import run_phase5_ref4
-    from phase5_fog_node.ref_35 import run_phase5_ref35
-    from phase5_fog_node.ref_36 import run_phase5_ref36
 
     from phase6_user_decrypt.ours import run_phase6_simulation
     from phase6_user_decrypt.ref_4 import run_phase6_ref4
-    from phase6_user_decrypt.ref_35 import run_phase6_ref35
-    from phase6_user_decrypt.ref_36 import run_phase6_ref36
 
     # Per-scheme resource profiling: {phase: {scheme: metrics}}
     phase_resources = {
@@ -215,44 +206,6 @@ def main():
 
     _, rm = profile_phase(run_phase6_ref4)
     phase_resources["Phase 6"]["Ref[4]"] = rm
-
-    # ═══════════════════════════════════════════════════════════
-    # Run Ref[35] Zaheer: Phase 1→2→5→6
-    # ═══════════════════════════════════════════════════════════
-    print("\n" + "=" * 70)
-    print("  SCHEME: Ref[35] Zaheer et al.")
-    print("=" * 70)
-
-    _, rm = profile_phase(run_phase1_ref35)
-    phase_resources["Phase 1"]["Ref[35]"] = rm
-
-    _, rm = profile_phase(run_phase2_ref35)
-    phase_resources["Phase 2"]["Ref[35]"] = rm
-
-    _, rm = profile_phase(run_phase5_ref35)
-    phase_resources["Phase 5"]["Ref[35]"] = rm
-
-    _, rm = profile_phase(run_phase6_ref35)
-    phase_resources["Phase 6"]["Ref[35]"] = rm
-
-    # ═══════════════════════════════════════════════════════════
-    # Run Ref[36] Man: Phase 1→2→5→6
-    # ═══════════════════════════════════════════════════════════
-    print("\n" + "=" * 70)
-    print("  SCHEME: Ref[36] Man et al.")
-    print("=" * 70)
-
-    _, rm = profile_phase(run_phase1_ref36)
-    phase_resources["Phase 1"]["Ref[36]"] = rm
-
-    _, rm = profile_phase(run_phase2_ref36)
-    phase_resources["Phase 2"]["Ref[36]"] = rm
-
-    _, rm = profile_phase(run_phase5_ref36)
-    phase_resources["Phase 5"]["Ref[36]"] = rm
-
-    _, rm = profile_phase(run_phase6_ref36)
-    phase_resources["Phase 6"]["Ref[36]"] = rm
 
     # ═══════════════════════════════════════════════════════════
     # Phase 4 baselines (use Ours' data, just different schedulers)

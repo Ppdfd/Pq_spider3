@@ -115,7 +115,7 @@ def run_phase5_ref4():
         t_verify_total += (time.perf_counter() - t0) * 1000
         
     metrics["poly1305_verify"] = t_verify_total
-    print(f"[1/3] Poly1305 verify × {num_packets}: {t_verify_total:.2f} ms")
+    print(f"[1/3] Poly1305 verify x {num_packets}: {t_verify_total:.2f} ms")
 
     augmented_C_rs = []
     t0 = time.perf_counter()
@@ -134,7 +134,7 @@ def run_phase5_ref4():
         
     t_beta = (time.perf_counter() - t0) * 1000
     metrics["beta_augmentation"] = t_beta
-    print(f"[2/5] Beta augmentation × {num_packets}: {t_beta:.2f} ms")
+    print(f"[2/5] Beta augmentation x {num_packets}: {t_beta:.2f} ms")
 
     batch_header = b"".join(
         np.array(p["u"], dtype=np.int64).tobytes()
@@ -187,7 +187,7 @@ def run_phase5_ref4():
         stripped_C_rs.append(C_r_stripped.tolist())
     t_strip = (time.perf_counter() - t0) * 1000
     metrics["flex_stripping"] = t_strip
-    print(f"[5/5] Flex attribute stripping × {num_packets}: {t_strip:.2f} ms")
+    print(f"[5/5] Flex attribute stripping x {num_packets}: {t_strip:.2f} ms")
 
     metrics["total_fog_latency"] = (time.perf_counter() - start_total) * 1000
 

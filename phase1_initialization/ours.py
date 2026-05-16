@@ -259,7 +259,7 @@ def run_phase1_simulation():
         metrics["fog_node_init"].append(t_fn)
         print(f"  -> Fog Node {i} Ready ({t_fn:.2f} ms) "
               f"[{tier['tier']}, {enc_count} enclaves, "
-              f"CPU×{tier['cpu_speed']:.1f}]")
+              f"CPUx{tier['cpu_speed']:.1f}]")
 
     # ── Step 6: IIoT Device Initialization ──
     # Eq 7: (c_gkem, k_gkem) ← Encap_Kyber(pk_GW)
