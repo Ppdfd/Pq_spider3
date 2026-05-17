@@ -53,6 +53,11 @@ Each phase compares "Ours" vs "Ref [4]" and prints a comparison table. Metrics a
 
 ## Run a Single Graph
 you can comment in run_all_graphs.py graph you don't want to generated
+## Run a generateTask function 
+in graphs/generateTask.py
+```bash
+python graphs/generateTask.py
+```
 
 ## Configuration (`config.py`)
 All simulation parameters are controlled from `config.py`. Key sections:
@@ -87,3 +92,4 @@ G1_REPS = 3                           # fewer repetitions
 graphs/spider_full_evaluation/     -> Generated .png graphs
 graphs/spider_full_evaluation/raw/ -> Raw .csv data dumps
 ```
+Noted: there is no raw/graph9 because it generated from graph8 data
