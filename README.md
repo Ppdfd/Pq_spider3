@@ -53,7 +53,7 @@ Each phase compares "Ours" vs "Ref [4]" and prints a comparison table. Metrics a
 
 ## Run a Single Graph
 you can comment in run_all_graphs.py graph you don't want to generated
-## Run a generateTask function 
+## Run a generate Task function 
 in graphs/generateTask.py
 ```bash
 python graphs/generateTask.py
