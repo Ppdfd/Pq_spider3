@@ -1,6 +1,6 @@
 # PQ-SPIDER Evaluation Framework
 **Post-Quantum Secure and Dynamic Load-Balanced Encryption for IIoT Data in Fog Computing (Spider)**
-This repository contains the simulation and evaluation framework for the PQ-SPIDER architecture. It models a complete end-to-end IIoT data pipeline, comparing our proposed approach ("Spider") against state-of-the-art reference implementations (Ref [4], Ref [37], Ref [39]).
+This repository contains the simulation and evaluation framework for the PQ-SPIDER architecture. It models a complete end-to-end IIoT data pipeline, comparing our proposed approach ("Spider") against state-of-the-art reference implementations (Ref[4], Ref[37], Ref[39]).
 
 ---
 ## How to Run
