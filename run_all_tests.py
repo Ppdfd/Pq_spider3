@@ -7,12 +7,16 @@ CHANGES vs original:
   [FAIRNESS] The end-to-end total row now shows TWO figures:
              - Core total (Phases 1+2+5+6) — apples-to-apples
                across all schemes.
-             - Ours-full total (1+2+3+4+5+6) — includes PQ-SPIDER's
-               gateway and scheduler phases, which refs do not have.
+             - Ours-full total (1+2+3+5+6) — includes PQ-SPIDER's
+               gateway phase, which refs do not have.
              The old code lumped everything into one total and
-             silently charged Ours for phases 3 and 4 while refs
+             silently charged Ours for extra phases while refs
              got 0, making Ours look worse in end-to-end comparisons
              without disclosing the asymmetry.
+  [CLEANUP] Phase 4 scheduling removed from pipeline — the paper's
+            load-balancing results come from graphs/simulation_core.py,
+            not from the pipeline. The optee_bench/ data loader remains
+            in phase4_load_balance/ for use by graph simulations.
 """
 
 import sys
@@ -23,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from phase1_initialization import main as phase1_main
 from phase2_iiot_encrypt   import main as phase2_main
 from phase3_edge_gateway   import main as phase3_main
-from phase4_load_balance   import main as phase4_main
+
 from phase5_fog_node       import main as phase5_main
 from phase6_user_decrypt   import main as phase6_main
 
@@ -44,8 +48,6 @@ PHASES = [
     ("Phase 2 (Dev Enc)",   "phase2_iiot_encrypt",   "total_device_latency",
      True),
     ("Phase 3 (Gateway)*",  "phase3_edge_gateway",   "total_gateway_latency",
-     False),
-    ("Phase 4 (Spider)*", "phase4_load_balance",   "total_scheduler_latency",
      False),
     ("Phase 5 (Fog)",       "phase5_fog_node",       "total_fog_latency",
      True),
@@ -110,8 +112,8 @@ def grand_summary():
         print(_fmt(total if not missing else None), end="")
     print()
 
-    # Ours-full total (all 6 phases — only meaningful for Ours).
-    print(f"{'Ours-full (1+2+3+4+5+6)':<24}", end="")
+    # Ours-full total (all phases — only meaningful for Ours).
+    print(f"{'Ours-full (1+2+3+5+6)':<24}", end="")
     for scheme_label, _ in SCHEMES:
         if scheme_label != "Ours":
             print(_fmt(None), end="")
@@ -146,10 +148,7 @@ def main():
 
     from phase3_edge_gateway.ours import run_phase3_simulation
 
-    from phase4_load_balance.ours import run_phase4_simulation
-    from phase4_load_balance.ref_22 import run_phase4_ref22
-    from phase4_load_balance.ref_37 import run_phase4_ref37
-    from phase4_load_balance.ref_39 import run_phase4_ref39
+
 
     from phase5_fog_node.ours import run_phase5_simulation
     from phase5_fog_node.ref_4 import run_phase5_ref4
@@ -160,11 +159,11 @@ def main():
     # Per-scheme resource profiling: {phase: {scheme: metrics}}
     phase_resources = {
         "Phase 1": {}, "Phase 2": {}, "Phase 3": {},
-        "Phase 4": {}, "Phase 5": {}, "Phase 6": {},
+        "Phase 5": {}, "Phase 6": {},
     }
 
     # ═══════════════════════════════════════════════════════════
-    # Run Ours: full chain Phase 1→2→3→4→5→6
+    # Run Ours: full chain Phase 1→2→3→5→6
     # ═══════════════════════════════════════════════════════════
     print("\n" + "=" * 70)
     print("  SCHEME: Ours (PQ-SPIDER)")
@@ -178,9 +177,6 @@ def main():
 
     _, rm = profile_phase(run_phase3_simulation)
     phase_resources["Phase 3"]["Ours"] = rm
-
-    _, rm = profile_phase(run_phase4_simulation)
-    phase_resources["Phase 4"]["Ours"] = rm
 
     _, rm = profile_phase(run_phase5_simulation)
     phase_resources["Phase 5"]["Ours"] = rm
@@ -207,24 +203,9 @@ def main():
     _, rm = profile_phase(run_phase6_ref4)
     phase_resources["Phase 6"]["Ref[4]"] = rm
 
-    # ═══════════════════════════════════════════════════════════
-    # Phase 4 baselines (use Ours' data, just different schedulers)
-    # ═══════════════════════════════════════════════════════════
-    print("\n" + "=" * 70)
-    print("  PHASE 4 BASELINES")
-    print("=" * 70)
-
-    # Re-run Ours phases 1-3 to ensure consistent state for schedulers
-    with contextlib.redirect_stdout(io.StringIO()):
-        run_phase1_simulation()
-        run_phase2_simulation()
-        run_phase3_simulation()
-
-    for label, func in [("Ref[22]", run_phase4_ref22),
-                         ("Ref[37]", run_phase4_ref37),
-                         ("Ref[39]", run_phase4_ref39)]:
-        _, rm = profile_phase(func)
-        phase_resources["Phase 4"][label] = rm
+    # NOTE: Phase 4 load-balancing evaluation is in graphs/simulation_core.py
+    # (Graphs 5-9).  Standalone scheduling scripts were removed to avoid
+    # confusion with the graph results used in the paper.
 
     # ═══════════════════════════════════════════════════════════
     # Generate graphs (not profiled)

@@ -19,12 +19,9 @@ from phase1_initialization.ref_4 import run_phase1_ref4
 
 
 from utils.dataset_loader import DataLoader
+from utils.eval_utils import _avg
 
 import config
-
-
-def _avg(lst):
-    return sum(lst) / len(lst) if lst else 0.0
 
 
 def main():
@@ -71,7 +68,6 @@ def main():
     print("  Only Ours and Ref [4] perform CP-ABE attribute setup + user keygen.\n")
 
 
-
-
 if __name__ == "__main__":
     main()
+

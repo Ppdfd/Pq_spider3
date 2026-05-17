@@ -20,12 +20,9 @@ from phase2_iiot_encrypt.ours import run_phase2_simulation
 from phase2_iiot_encrypt.ref_4 import run_phase2_ref4
 
 from utils.dataset_loader import DataLoader
+from utils.eval_utils import _avg
 
 import config
-
-
-def _avg(lst):
-    return sum(lst) / len(lst) if lst else 0.0
 
 
 def main():
@@ -65,8 +62,6 @@ def main():
     print("\nNotes:")
     print("  Ref [4]:  Ring-LWE encap runs per-attribute poly mults (n=256, q=8192)")
     print()
-
-
 
 
 if __name__ == "__main__":

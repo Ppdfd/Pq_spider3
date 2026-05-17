@@ -1,35 +1,23 @@
 #!/usr/bin/env python3
 """
-Spider Full Evaluation Simulator
+Spider Evaluation Utilities
 ==================================
 
-This module generates the complete evaluation graph set for the research
-system "Post-Quantum Secure and Dynamic Load-Balanced Encryption for IIoT
-Data in Fog Computing (Spider)".
+Shared utilities for the PQ-SPIDER evaluation framework: seeding,
+plotting (IEEE-style), CSV export, and common data helpers.
 
-The code is intentionally simulation-based rather than benchmark-forging:
-it models queue buildup, cryptographic service time, cache locality,
-network jitter, heterogeneous node capacity, TEE/REE split execution,
-EPC pressure, and recovery under failures.  All baselines are evaluated
-against the same synthetic workloads and node populations in each run.
+Used by all graph modules in ``graphs/`` and by ``run_all_graphs.py``.
 
-Generated graphs:
-  Graph 1  Initialization / Setup Phase
+Generated graphs (via graph modules):
+  Graph 1  CP-ABE Setup Latency vs Attributes
   Graph 2  Cache / Reuse-Aware Scheduling
   Graph 3  CP-ABE Encryption Cost at Fog
   Graph 4  CP-ABE Decryption Cost at User
-  Graph 5  Homogeneous Fog Nodes
-  Graph 6  Heterogeneous Fog Nodes
-  Graph 8  Recovery Time vs Failure Rate
-
-Graph 7 is intentionally skipped because the requested experiment excludes
-intra-node multi-enclave scheduling.
-
-Run from the project root:
-    python3 run_spider_evaluation.py
-
-or directly:
-    python3 evaluation/spider_full_evaluation.py
+  Graph 5  Homogeneous Fog Nodes (Load Balancing)
+  Graph 6  Heterogeneous Fog Nodes (Load Balancing)
+  Graph 7  Recovery Time vs Failure Rate
+  Graph 8  Intra-node Enclave Scheduling
+  Graph 9  Routing Intelligence (Task Distribution)
 
 Outputs:
     graphs/spider_full_evaluation/*.png
