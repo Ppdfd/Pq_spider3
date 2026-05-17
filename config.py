@@ -104,7 +104,7 @@ FLEX_ATTRIBUTES = ["Admin", "Technician", "ZoneB", "Safety"]
 # 6. GRAPH CONTROL
 # ---------------------------------------------------------
 # Set False to skip graph generation for fast simulation-only runs
-GENERATE_GRAPHS = False
+GENERATE_GRAPHS = True
 # Offered load for intra-node experiments (graphs 8/9).
 # 0.70 matches IEC 61784-2 Class 2 industrial network targets.
 INTRA_NODE_OFFERED_LOAD = 0.70

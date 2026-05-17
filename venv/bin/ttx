@@ -1,4 +1,4 @@
-#!/home/student/pq_spider_migga/venv/bin/python3
+#!/home/student/new/Pq_spider_new/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
