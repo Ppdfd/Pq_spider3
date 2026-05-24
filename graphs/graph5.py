@@ -5,7 +5,7 @@ import numpy as np
 from utils.eval_utils import (
     GLOBAL_SEED, summarize_runs, save_csv, plot_lines, RAW_DIR, noisy_curve
 )
-from graphs.simulation_core import simulate_load_balancing
+from phase4_load_balance.inter_node import simulate_load_balancing
 
 
 def graph_load_balancing(

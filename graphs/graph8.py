@@ -5,11 +5,14 @@ import numpy as np
 from utils.eval_utils import (
     GLOBAL_SEED, summarize_runs, save_csv, plot_lines, RAW_DIR
 )
-from graphs.simulation_core import (
-    SIMULATION_PARAMS, Enclave, WorkloadTask,
-    generate_tasks, generate_enclaves, clone_enclaves,
+from phase4_load_balance.params import SIMULATION_PARAMS
+from phase4_load_balance.models import Enclave, WorkloadTask, clone_enclaves
+from phase4_load_balance.generators import (
+    generate_tasks, generate_enclaves, _load_phase5_service_ms,
+)
+from phase4_load_balance.intra_node import (
     choose_enclave, execute_on_enclave, _drain_queues,
-    simulate_intra_node, _load_phase5_service_ms,
+    simulate_intra_node,
 )
 
 

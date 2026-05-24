@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from utils.eval_utils import OUT_DIR
-from graphs.simulation_core import Enclave
+from phase4_load_balance.models import Enclave
 
 
 def graph9_queue_state(

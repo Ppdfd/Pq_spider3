@@ -47,7 +47,7 @@ python phase6_user_decrypt/main.py
 ```
 Each phase compares "Ours" vs "Ref [4]" and prints a comparison table. Metrics are saved to `{phase}/results/` and intermediate data to `{phase}/output/`.
 
-> **Note on Phase 4**: The load balancing evaluation (Graphs 5–9) is implemented as a discrete-event simulation in `graphs/simulation_core.py`, not as a standalone pipeline phase. The `phase4_load_balance/` directory only contains `optee_bench/` (OP-TEE QEMU measurement data), which is used by the graph simulations. See `phase4_load_balance/README.md` for details.
+> **Note on Phase 4**: The load balancing evaluation (Graphs 5–9) is implemented as a discrete-event simulation in `phase4_load_balance/` (split across `inter_node.py` and `intra_node.py`), not as a standalone pipeline phase. The `phase4_load_balance/optee_bench/` subdirectory contains OP-TEE QEMU measurement data used by the graph simulations. See `phase4_load_balance/README.md` for details.
 
 ---
 

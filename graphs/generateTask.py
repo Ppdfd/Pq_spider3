@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import numpy as np
-from simulation_core import generate_tasks
+from phase4_load_balance.generators import generate_tasks
 from utils.eval_utils import GLOBAL_SEED
 def main():
     seed = GLOBAL_SEED
