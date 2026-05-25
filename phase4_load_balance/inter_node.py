@@ -79,18 +79,47 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
                           + rng.normal(0.0, 1.5))
 
     elif algorithm == "Spider (Ours)":
+        import config
         scores = []
         for n in nodes:
             # Spider models the exact split TEE -> REE critical path
+            # Eq 35: T_wait approximation
             net_est = n.network_ms
             tee_est = (task.tee_work / n.tee_rate) + 2.6 + epc_pressure_penalty(task, n)
             ree_est = (task.ree_work / n.ree_rate) + 1.8
             tee_finish = max(task.arrival_ms + net_est, n.tee_available_ms) + tee_est
             completion_est = max(tee_finish, n.ree_available_ms) + ree_est + 3.6
 
-            p_cap = 0.05 * max(0.0, task.crypto_intensity - n.capability)
-            p_trust = 0.2 * (1.0 - n.trust)
-            scores.append(completion_est - task.arrival_ms + p_cap + p_trust + rng.normal(0.0, 0.5))
+            T_wait = completion_est - task.arrival_ms
+
+            # Eq 36: P_epc (already included via epc_pressure_penalty above)
+            # Eq 37: P_cap — capability penalty
+            p_cap = config.W4_CAP * max(0.0, task.crypto_intensity - n.capability)
+            # Eq 38: P_trust — trust penalty
+            p_trust = config.W5_TRUST * (1.0 - n.trust)
+
+            # Eq 32: eta_k — urgency (risk-based)
+            eta_k = task.risk
+
+            # Eq 33: delta_k — deadline sensitivity
+            d_max = max(1.0, task.deadline_ms)
+            delta_k = max(0.0, 1.0 - max(0.0, task.deadline_ms - task.arrival_ms) / d_max)
+
+            # Eq 39: R_reuse — computation reuse bonus
+            has_policy = getattr(n, 'policy_cached', False) if hasattr(n, 'policy_cached') else (n.node_id < 3)
+            has_kyber = getattr(n, 'kyber_cached', False) if hasattr(n, 'kyber_cached') else (n.node_id < 3)
+            R_reuse = config.THETA1_POLICY * float(has_policy) + config.THETA2_KYBER * float(has_kyber)
+
+            # Eq 40: SpiderScore = w1*T_wait + w2*L_j + w3*P_epc + w4*P_cap
+            #                    + w5*P_trust - w6*eta*U_j - w7*delta*mu_TEE - w8*R_reuse
+            score = (config.W1_WAIT * T_wait
+                     + config.W2_LATENCY * net_est
+                     + p_cap + p_trust
+                     - config.W6_URGENCY * eta_k * n.trust
+                     - config.W7_DEADLINE * delta_k * n.tee_rate
+                     - config.W8_REUSE * R_reuse
+                     + rng.normal(0.0, 0.5))
+            scores.append(score)
     else:
         raise ValueError(algorithm)
 

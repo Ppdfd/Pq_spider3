@@ -1,15 +1,17 @@
 """
 Phase V (Ours): Multi-Enclave TEE-Assisted Split-Phase CP-ABE Processing
 ========================================================================
-Matches PQ-SPIDER paper Sec III-C, Phase V (Eq 54-73):
+Matches PQ-SPIDER2 paper Sec III-C, Phase V (Eq 54-92):
 
-  Step 1 (Eq 54):  GTag' ← H(Sort({Auth_i}) ∥ t_G)   — Batch verify
-  Step 2 (Eq 55):  B_k → {B_k^(1),...,B_k^(r)}        — Batch decomposition
-  Step 3 (Eq 56-60): Enclave-parallel decrypt + aggregate
-  Step 4 (Eq 61-62): K_AES ← {0,1}^256; AES-GCM encrypt
-  Step 5 (Eq 63-68): TEE partial CP-ABE (s, v, CT_0, V_base, Ψ_out)
-  Step 6 (Eq 69-71): REE policy completion from cache
-  Step 7 (Eq 72-73): Dilithium sign + Ω package
+  Step 1 (Eq 54-55):  GTag' verification
+  Step 2 (Eq 56-64):  Enclave-parallel batch decomposition
+                       B_k → {B_k^(1),...,B_k^(r)} with SubID_i
+  Step 3 (Eq 65-73):  Per-enclave: decrypt, aggregate, chunk-encrypt,
+                       auth token τ_i = MAC(h_i)
+  Step 4 (Eq 74-81):  Trusted deterministic merge + Root_k commitment
+  Step 5 (Eq 82-87):  TEE partial CP-ABE (s, v, CT_0, V_base, Ψ_out)
+  Step 6 (Eq 88-90):  REE policy completion from cache
+  Step 7 (Eq 91-92):  Dilithium sign + Ω package with D_k manifest
 """
 
 import os
@@ -18,6 +20,7 @@ import config
 import time
 import json
 import hashlib
+import hmac
 import numpy as np
 from pathlib import Path
 
@@ -37,11 +40,25 @@ def _compute_g_tag(auths, t_G):
 
 
 def kdf(shared_secret, puf_secret, device_id, timestamp, counter):
-    """Eq 16: K_{S,i} = KDF(H(k_kem) ∥ R_secret ∥ ID ∥ t ∥ ctr)"""
+    """Eq 15: K_{S,i} = KDF(H(k_kem) ∥ R_secret ∥ ID ∥ t ∥ ctr)"""
     h_kkem = hashlib.sha256(shared_secret).digest()
     msg = (h_kkem + puf_secret + device_id.encode()
            + str(timestamp).encode() + str(counter).encode())
     return hashlib.sha256(msg).digest()
+
+
+def _chunk_kdf(k_master, batch_id, sub_id, epoch):
+    """Eq 68: K_chunk^(i) = KDF(K_master_AES ∥ BID ∥ SubID_i ∥ epoch_k)"""
+    return hashlib.sha256(
+        k_master + batch_id + sub_id + str(epoch).encode()
+    ).digest()
+
+
+def _compute_sub_id(batch_id, index, epoch):
+    """Eq 64: SubID_i = H(BID ∥ i ∥ epoch_k)"""
+    return hashlib.sha256(
+        batch_id + str(index).encode() + str(epoch).encode()
+    ).digest()
 
 
 def run_phase5_simulation():
@@ -52,6 +69,8 @@ def run_phase5_simulation():
     metrics = {
         "batch_verify":        0,
         "enclave_decrypt":     0,
+        "chunk_encrypt":       0,
+        "merge_commit":        0,
         "aes_reencrypt":       0,
         "tee_partial_cpabe":   0,
         "ree_policy_expand":   0,
@@ -100,18 +119,17 @@ def run_phase5_simulation():
         "t0":      fog_node0["sk_sig"]["t0"],
     }
 
-    # Eq 67: Base vector optimization — C_base(T_ID) = A^⊤ precomputed
-    # Eq 69: Load precomputed LSSS policy cache from Phase I
+    # Eq 88: Load precomputed LSSS policy cache from Phase I
     try:
         policy_cache = loader.load_data(phase1_dir, "policy_cache.json")
-        print("  -> Loaded precomputed LSSS policy cache (Eq 4/69)")
+        print("  -> Loaded precomputed LSSS policy cache (Eq 4/88)")
     except FileNotFoundError:
         policy_cache = None
         print("  -> No policy cache found; will build fresh")
 
     start_total = time.perf_counter()
 
-    # ── Step 1: Batch integrity verification (Eq 54) ──
+    # ── Step 1: Batch integrity verification (Eq 54-55) ──
     t0 = time.perf_counter()
     all_auths = [bytes.fromhex(p["auth_i"]) for p in packets]
     t_G = bytes.fromhex(batch["t_G"])
@@ -124,51 +142,143 @@ def run_phase5_simulation():
     metrics["batch_verify"] = t_verify
     print(f"[1/7] Batch verify GTag (Eq 54): {t_verify:.2f} ms")
 
-    # ── Step 2-3: Enclave packet decryption (Eq 55-60) ──
-    # Sequential measurement; real parallelism requires ProcessPoolExecutor.
-    print(f"[2-3/7] Enclave decrypt + aggregate ({len(packets)} packets)...")
-    aggregated_plaintexts = []
+    # ── Step 2: Enclave-parallel batch decomposition (Eq 56-64) ──
+    # Determine decomposition factor r (Eq 59)
+    batch_id = b"BID-001"
+    epoch_k = 1
+    enc_count = fog_node0.get("enclaves", [{}])
+    n_enclaves = len(enc_count) if isinstance(enc_count, list) else config.ENC_PER_NODE
+    n_packets = len(packets)
+
+    # Eq 59: r = min(N_E, ceil(|B_k|*s_k / (eta*M_EPC)) + ...)
+    # Simplified: r = min(available_enclaves, ceil(n_packets / packets_per_enclave))
+    # Using at least 2 sub-batches if there are enough packets and enclaves
+    r = min(n_enclaves, max(1, n_packets))
+    r = max(1, r)  # At least 1 sub-batch
+
+    # Eq 61-63: Partition packets into r approximately balanced sub-batches
+    sub_batches = [[] for _ in range(r)]
+    for i, pkt in enumerate(packets):
+        sub_batches[i % r].append(pkt)
+
+    # Generate SubID for each sub-batch (Eq 64)
+    sub_ids = [_compute_sub_id(batch_id, i, epoch_k) for i in range(r)]
+
+    print(f"[2/7] Batch decomposition: {n_packets} packets -> "
+          f"{r} sub-batches (Eq 56-64)")
+
+    # ── Step 3: Enclave-parallel decrypt + chunk encrypt (Eq 65-73) ──
+    # Eq 65: K_master_AES ← {0,1}^256
+    k_master_aes = os.urandom(32)
     kyber_fn = SecureKyber()
 
+    # Enclave-sealed key for auth tokens (Eq 72)
+    k_tee_seal = os.urandom(32)
+
+    enclave_outputs = []  # Γ_i from each enclave (Eq 73)
+
     t_dec_start = time.perf_counter()
-    for p in packets:
-        # Kyber Decap
-        c_kem = bytes.fromhex(p["c_kem"])
-        k_kem = kyber_fn.decap(c_kem, sk_fn)
+    for sub_idx in range(r):
+        sub_packets = sub_batches[sub_idx]
+        sub_id = sub_ids[sub_idx]
 
-        # Eq 16: Session-key re-derivation
-        device_id = p["device_id"]
-        r_secret = bytes.fromhex(devices_info[device_id]["r_secret"])
-        ks_i = kdf(k_kem, r_secret, device_id, p["timestamp"], 1)
+        # Decrypt packets in this sub-batch (Eq 66)
+        sub_plaintexts = []
+        for p in sub_packets:
+            c_kem = bytes.fromhex(p["c_kem"])
+            k_kem = kyber_fn.decap(c_kem, sk_fn)
+            device_id = p["device_id"]
+            r_secret = bytes.fromhex(devices_info[device_id]["r_secret"])
+            ks_i = kdf(k_kem, r_secret, device_id, p["timestamp"], 1)
+            ct_i = bytes.fromhex(p["ct_i"])
+            nonce = bytes.fromhex(p["nonce"])
+            aad = bytes.fromhex(p["aad"])
+            chacha = SecureChaCha20(key=ks_i)
+            pt = chacha.decrypt(ct_i, nonce, associated_data=aad)
+            sub_plaintexts.append(pt)
 
-        # Eq 56: m_ℓ ← ChaCha20-Poly1305.Dec(K_{S,ℓ}, N_ℓ, CT_ℓ, AAD_ℓ, Tag_ℓ)
-        ct_i  = bytes.fromhex(p["ct_i"])
-        nonce = bytes.fromhex(p["nonce"])
-        aad   = bytes.fromhex(p["aad"])
-        chacha = SecureChaCha20(key=ks_i)
-        pt = chacha.decrypt(ct_i, nonce, associated_data=aad)
-        aggregated_plaintexts.append(pt)
+        # Eq 67: Streaming aggregation S_j = H(S_{j-1} ∥ m_j)
+        M_i = b"".join(sub_plaintexts)
+        AAD_i = b"".join(bytes.fromhex(p["aad"]) for p in sub_packets)
+
+        # Eq 68: K_chunk^(i) = KDF(K_master_AES ∥ BID ∥ SubID_i ∥ epoch_k)
+        k_chunk = _chunk_kdf(k_master_aes, batch_id, sub_id, epoch_k)
+
+        # Eq 69-70: (C_i, Tag_i) ← AES-GCM.Enc(K_chunk^(i), IV_i, M_i, AAD_i)
+        aes_chunk = SecureAESGCM(key=k_chunk)
+        C_i, IV_i = aes_chunk.encrypt(M_i, associated_data=AAD_i)
+
+        # Eq 71: h_i = H(BID ∥ SubID_i ∥ epoch_k ∥ C_i ∥ Tag_i ∥ IV_i ∥ AAD_i)
+        h_i = hashlib.sha256(
+            batch_id + sub_id + str(epoch_k).encode()
+            + C_i + IV_i + AAD_i
+        ).digest()
+
+        # Eq 72: τ_i = MAC_{K_TEE_i}(h_i)
+        tau_i = hmac.new(k_tee_seal, h_i, hashlib.sha256).digest()
+
+        # Eq 73: Γ_i = (SubID_i, C_i, Tag_i, IV_i, AAD_i, h_i, τ_i)
+        enclave_outputs.append({
+            "sub_id": sub_id,
+            "C_i": C_i,
+            "IV_i": IV_i,
+            "AAD_i": AAD_i,
+            "h_i": h_i,
+            "tau_i": tau_i,
+            "chunk_len": len(C_i),
+        })
+
     t_decrypt = (time.perf_counter() - t_dec_start) * 1000
     metrics["enclave_decrypt"] = t_decrypt
-    print(f"  -> Enclave decrypt x {len(packets)}: {t_decrypt:.2f} ms")
+    print(f"[3/7] Enclave decrypt + chunk encrypt x {r} sub-batches: "
+          f"{t_decrypt:.2f} ms")
 
-    # Eq 57-60: Aggregation
-    m_agg   = b"".join(aggregated_plaintexts)
-    aad_agg = b"".join(bytes.fromhex(p["aad"]) for p in packets)
-    print(f"  -> M_agg: {len(m_agg)} bytes from {len(packets)} packets")
-
-    # ── Step 4: AES-GCM re-encryption (Eq 61-62) ──
+    # ── Step 4: Trusted deterministic merge + Root_k (Eq 74-81) ──
     t0 = time.perf_counter()
-    k_aes = os.urandom(32)  # Eq 61: K_AES ← {0,1}^256
-    aes = SecureAESGCM(key=k_aes)
-    # Eq 62: (CT_AES, Tag_AES) ← AES-GCM.Enc(K_AES, IV, M_agg, AAD_agg)
-    ct_aes, iv = aes.encrypt(m_agg, associated_data=aad_agg)
-    t_aes = (time.perf_counter() - t0) * 1000
-    metrics["aes_reencrypt"] = t_aes
-    print(f"[4/7] AES-GCM re-encrypt (Eq 61-62): {t_aes:.2f} ms")
 
-    # ── Step 5: TEE partial CP-ABE (Eq 63-68) ──
-    # Eq 69: Retrieve precomputed LSSS from cache (or build fresh)
+    # Eq 74: Verify each enclave MAC token
+    for gamma in enclave_outputs:
+        expected_tau = hmac.new(k_tee_seal, gamma["h_i"], hashlib.sha256).digest()
+        assert hmac.compare_digest(gamma["tau_i"], expected_tau), \
+            "Enclave MAC verification failed!"
+
+    # Eq 75: Deterministic merge ordering O = SortBy(SubID_i)
+    enclave_outputs.sort(key=lambda g: g["sub_id"])
+
+    # Eq 76-78: Merge encrypted chunks
+    CT_AES = b"".join(g["C_i"] for g in enclave_outputs)
+
+    # Eq 79: IV set
+    IVs = [g["IV_i"] for g in enclave_outputs]
+
+    # Eq 80-81: Root_k = H(BID ∥ epoch_k ∥ r ∥ h^(1) ∥ ... ∥ h^(r))
+    root_input = batch_id + str(epoch_k).encode() + str(r).encode()
+    for g in enclave_outputs:
+        root_input += g["h_i"]
+    Root_k = hashlib.sha256(root_input).digest()
+
+    # Build chunk manifest D_k (Eq 94)
+    # D_k = {(SubID_i, |C_i|, AAD_i, IV_i, Tag_i)}_i
+    chunk_manifest = []
+    for g in enclave_outputs:
+        chunk_manifest.append({
+            "sub_id": g["sub_id"].hex(),
+            "chunk_len": g["chunk_len"],
+            "aad": g["AAD_i"].hex(),
+            "iv": g["IV_i"].hex(),
+        })
+
+    t_merge = (time.perf_counter() - t0) * 1000
+    metrics["merge_commit"] = t_merge
+    print(f"[4/7] Deterministic merge + Root_k (Eq 74-81): {t_merge:.2f} ms")
+
+    # Aggregate AAD for the full batch (for CP-ABE context binding)
+    aad_agg = b"".join(g["AAD_i"] for g in enclave_outputs)
+    print(f"  -> CT_AES: {len(CT_AES)} bytes, {r} chunks, "
+          f"Root_k: {Root_k[:8].hex()}...")
+
+    # ── Step 5: TEE partial CP-ABE (Eq 82-87) ──
+    # Eq 88: Retrieve precomputed LSSS from cache (or build fresh)
     t0 = time.perf_counter()
     if policy_cache:
         policy = policy_cache["policy"]
@@ -177,40 +287,44 @@ def run_phase5_simulation():
     policy_pkg = cpabe.ree_build_policy(policy)
     t_ree_build = (time.perf_counter() - t0) * 1000
 
-    # Eq 63-66: TEE samples s, e_0, builds v, computes CT_0 and V_base
+    # Eq 82-86: TEE samples s, e_0, builds v, computes CT_0 and V_base
     t0 = time.perf_counter()
-    tee_out = cpabe.tee_partial_encrypt(k_aes, policy_pkg)
+    tee_out = cpabe.tee_partial_encrypt(k_master_aes, policy_pkg)
     t_tee = (time.perf_counter() - t0) * 1000
     metrics["tee_partial_cpabe"] = t_tee
 
-    # ── Step 6: REE CP-ABE completion (Eq 69-71) ──
-    # Eq 70: CT_i = M_i · V_base + A^⊤_{ρ(i)} r_i + e_{1,i}
-    # Eq 71: CT_{L-ABE} = (CT_0, (M, ρ_ID), {CT_i})
+    # ── Step 6: REE CP-ABE completion (Eq 88-90) ──
+    # Eq 89: CT_i = M_i * V_base + A^T_{rho(i)} r_i + e_{1,i}
+    # Eq 90: CT_{L-ABE} = (CT_0, (M, rho_ID), {CT_i})
     t0 = time.perf_counter()
     ct_labe = cpabe.ree_finalize_ct(policy_pkg, tee_out)
     t_ree_finalize = (time.perf_counter() - t0) * 1000
     metrics["ree_policy_expand"] = t_ree_build + t_ree_finalize
-    print(f"[5-6/7] CP-ABE TEE partial (Eq 63-68): {t_tee:.2f} ms   "
-          f"REE expand (Eq 69-71): {metrics['ree_policy_expand']:.2f} ms")
+    print(f"[5-6/7] CP-ABE TEE partial (Eq 82-86): {t_tee:.2f} ms   "
+          f"REE expand (Eq 88-90): {metrics['ree_policy_expand']:.2f} ms")
 
-    # ── Step 7: Dilithium sign + Ω package (Eq 72-73) ──
-    # Eq 72: σ ← Sign_Dilithium(sk_FN, H(BID ∥ CT_AES ∥ CT_{L-ABE}))
-    batch_id = b"BID-001"
+    # ── Step 7: Dilithium sign + Omega package (Eq 91-92) ──
+    # Eq 91: sigma ← Sign_Dilithium(sk_FN, H(BID ∥ epoch_k ∥ CT_AES
+    #                                         ∥ D_k ∥ CT_{L-ABE} ∥ Root_k))
     ct_labe_bytes = json.dumps({
         "policy_type": ct_labe["policy_type"],
         "rho":         ct_labe["rho"],
     }, sort_keys=True).encode()
-    hash_input = hashlib.sha256(batch_id + ct_aes + ct_labe_bytes).digest()
+    dk_bytes = json.dumps(chunk_manifest, sort_keys=True).encode()
+    hash_input = hashlib.sha256(
+        batch_id + str(epoch_k).encode()
+        + CT_AES + dk_bytes + ct_labe_bytes + Root_k
+    ).digest()
 
     t0 = time.perf_counter()
     sigma = dil.sign(hash_input, sk_sig)
     t_sign = (time.perf_counter() - t0) * 1000
     metrics["dilithium_sign"] = t_sign
-    print(f"[7/7] Dilithium sign (Eq 72): {t_sign:.2f} ms")
+    print(f"[7/7] Dilithium sign (Eq 91): {t_sign:.2f} ms")
 
     metrics["total_fog_latency"] = (time.perf_counter() - start_total) * 1000
 
-    # Eq 73: Ω = ⟨BID, CT_AES, Tag_AES, IV, CT_{L-ABE}, σ⟩
+    # Eq 92: Omega = (BID, epoch_k, CT_AES, D_k, CT_{L-ABE}, Root_k, sigma)
     def _to_py(v):
         if isinstance(v, np.ndarray): return v.tolist()
         if isinstance(v, (np.integer,)): return int(v)
@@ -220,8 +334,10 @@ def run_phase5_simulation():
 
     omega = {
         "batch_id": batch_id.hex(),
-        "ct_aes":   ct_aes.hex(),
-        "iv":       iv.hex(),
+        "epoch_k": epoch_k,
+        "ct_aes":   CT_AES.hex(),
+        "chunk_manifest": chunk_manifest,  # D_k (Eq 94)
+        "root_k":   Root_k.hex(),          # Aggregation commitment (Eq 81)
         "ct_labe": {
             "policy_type": ct_labe["policy_type"],
             "rho":         ct_labe["rho"],
@@ -253,6 +369,7 @@ def run_phase5_simulation():
     print("\n" + "=" * 60)
     print(f"Phase V Simulation Finished. Total Fog Latency : "
           f"{metrics['total_fog_latency']:.2f} ms")
+    print(f"  Enclave-parallel: {r} sub-batches, Root_k: {Root_k[:8].hex()}...")
     print("=" * 60)
     return metrics
 

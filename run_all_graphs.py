@@ -25,36 +25,36 @@ def run_all_graphs():
     print("=" * 72)
 
     graph1_setup_phase(rng)
-    print("  ✓ Graph 1 generated (phase1)")
+    print("  * Graph 1 generated (phase1)")
 
     graph2_cache_reuse(rng)
-    print("  ✓ Graph 2 generated (phase3)")
+    print("  * Graph 2 generated (phase3)")
 
     graph3_cpabe_encryption(rng)
-    print("  ✓ Graph 3 generated (phase5)")
+    print("  * Graph 3 generated (phase5)")
 
     graph4_cpabe_decryption(rng)
-    print("  ✓ Graph 4 generated (phase6)")
+    print("  * Graph 4 generated (phase6)")
 
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
-    print("  ✓ Graph 5 generated (phase4)")
+    print("  * Graph 5 generated (phase4)")
 
     graph6_heterogeneous_fog()
-    print("  ✓ Graph 6 generated (phase4)")
+    print("  * Graph 6 generated (phase4)")
 
     graph7_recovery(rng)
-    print("  ✓ Graph 7 generated (phase5)")
+    print("  * Graph 7 generated (phase5)")
 
     # Graph 8: task-count sweep (runs its own simulations)
     graph8_intra_enclave(rng)
-    print("  ✓ Graph 8 generated (phase4)")
+    print("  * Graph 8 generated (phase4)")
 
     # ── Single experiment for all diagnostic views (9, 11, 12, 13, 14) ──
     results, enclaves = run_graph8_experiment(rng)
-    print("  ✓ Graph 8 experiment complete (1 run x 3 algorithms)")
+    print("  * Graph 8 experiment complete (1 run x 3 algorithms)")
 
     graph9_queue_state(results, enclaves)
-    print("  ✓ Graph 9 generated (routing intelligence)")
+    print("  * Graph 9 generated (routing intelligence)")
     print("=" * 72)
 
 if __name__ == "__main__":

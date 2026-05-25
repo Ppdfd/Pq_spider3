@@ -1,18 +1,20 @@
 {
     "batch_id": "BID-001",
-    "associated_data": "IIoT-DEV-000|1779008509|1IIoT-DEV-001|1779008509|1IIoT-DEV-002|1779008509|1IIoT-DEV-003|1779008509|1IIoT-DEV-004|1779008510|1IIoT-DEV-005|1779008510|1IIoT-DEV-006|1779008510|1IIoT-DEV-007|1779008510|1IIoT-DEV-008|1779008510|1IIoT-DEV-009|1779008510|1",
+    "epoch_k": 1,
+    "num_chunks": 4,
+    "root_k_verified": true,
     "signature_verified": true,
     "policy_type": "AND",
     "decrypted_payloads": [
-        "{\"sensor_id\": \"IIoT-DEV-000\", \"type\": \"temperature\", \"value\": 100.0, \"unit\": \"F\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-001\", \"type\": \"pressure\", \"value\": 105.2, \"unit\": \"kPa\", \"status\": \"normal\"}",
-        "{\"sensor_id\": \"IIoT-DEV-002\", \"type\": \"humidity\", \"value\": 50.0, \"unit\": \"%\", \"status\": \"nominal\"}",
-        "{\"sensor_id\": \"IIoT-DEV-003\", \"type\": \"vibration\", \"value\": 0.02, \"unit\": \"mm/s\", \"status\": \"nominal\"}",
-        "{\"sensor_id\": \"IIoT-DEV-004\", \"type\": \"voltage\", \"value\": 220.1, \"unit\": \"V\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-005\", \"type\": \"current\", \"value\": 15.4, \"unit\": \"A\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-009\", \"type\": \"actuator_status\", \"state\": \"open\", \"uptime_hours\": 342, \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-002\", \"type\": \"humidity\", \"value\": 50.0, \"unit\": \"%\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-006\", \"type\": \"temperature\", \"value\": 108.9, \"unit\": \"F\", \"status\": \"critical\", \"alert\": \"SHUTDOWN_RECOMMENDED\"}",
-        "{\"sensor_id\": \"IIoT-DEV-007\", \"type\": \"flow_rate\", \"value\": 50.2, \"unit\": \"L/min\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-000\", \"type\": \"temperature\", \"value\": 100.0, \"unit\": \"F\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-004\", \"type\": \"voltage\", \"value\": 220.1, \"unit\": \"V\", \"status\": \"nominal\"}",
         "{\"sensor_id\": \"IIoT-DEV-008\", \"type\": \"gas_level\", \"value\": 0.01, \"unit\": \"ppm\", \"status\": \"nominal\"}",
-        "{\"sensor_id\": \"IIoT-DEV-009\", \"type\": \"actuator_status\", \"state\": \"open\", \"uptime_hours\": 342, \"status\": \"nominal\"}"
+        "{\"sensor_id\": \"IIoT-DEV-003\", \"type\": \"vibration\", \"value\": 0.02, \"unit\": \"mm/s\", \"status\": \"nominal\"}",
+        "{\"sensor_id\": \"IIoT-DEV-007\", \"type\": \"flow_rate\", \"value\": 50.2, \"unit\": \"L/min\", \"status\": \"nominal\"}"
     ]
 }

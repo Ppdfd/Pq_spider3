@@ -115,9 +115,15 @@ def choose_enclave(
         return min(enclaves, key=lambda e: e.queue_length)
 
     elif algorithm == "Spider (Ours)":
+        # Eq 49: Admission control — M_free >= alpha * M_req (alpha > 1)
+        alpha_epc = getattr(config, 'ALPHA_EPC_SAFETY', 1.15)
+        feasible = [e for e in enclaves if e.epc_available >= alpha_epc * epc_req]
+        if not feasible:
+            feasible = enclaves  # Graceful degradation if all overloaded
+
         best_enc = None
         best_score = float("inf")
-        for e in enclaves:
+        for e in feasible:
             sc = _enclave_score_eq46(
                 e, task, epc_req,
                 tau=0.5,   # Lower threshold for intra-node (smaller EPC per enclave)

@@ -1,42 +1,42 @@
 [
     {
         "device_id": "IoT-DEV-000",
-        "poly_key": "875840b575ff49e4b707cde15f621b6425fb1ed5aa6c00d3ba266861b43e6e20"
+        "poly_key": "e76fee58c3d9c380de4f47447e9c8f4974cceb87280bb63d1239f015a32234e2"
     },
     {
         "device_id": "IoT-DEV-001",
-        "poly_key": "74fb4dcb03873405084f7d430467a8d6170de1df78dbce87d3deb17d3b610adf"
+        "poly_key": "b1ea250aa523951fd2acbb5518a60194d9191572c2c343c262aa5948867de020"
     },
     {
         "device_id": "IoT-DEV-002",
-        "poly_key": "15ad241b9531a90ef9ee64213623937bd486db9c1aa5422c96137e5031c53f69"
+        "poly_key": "1e03697473b65545150e3a1268ce38e940ccf36dbfd7b3e49619671b991c9d01"
     },
     {
         "device_id": "IoT-DEV-003",
-        "poly_key": "04bd02ce788dc5903da9364cc0c592b85db1f641dd0f3ed639fe82752632bade"
+        "poly_key": "1060cd40cadc253fc120aad8336bda8b3e5c10db2f934b929a2a8902d80ea5e7"
     },
     {
         "device_id": "IoT-DEV-004",
-        "poly_key": "b63b6eeafba74a5f49b9d6402ac6d22d4aefd26c513075fc7fbcc46befe7ead5"
+        "poly_key": "90120a0d0975b819a2a9c51928116879dce09f651cdc49c205b7844d23026800"
     },
     {
         "device_id": "IoT-DEV-005",
-        "poly_key": "7128b075e250d6ef0bff65b20b06167e5297620db3384a7ec2aef317dd453c9a"
+        "poly_key": "bd252f679623c7f9d860434416efe7abc5d56c9b567b206f6597e10ee4cc3a87"
     },
     {
         "device_id": "IoT-DEV-006",
-        "poly_key": "74bef009912ad8b2a54ee8c938c1076c155936bb88173b7f274f44a9e4919bed"
+        "poly_key": "e0977d5d80e8dfcff52d7f13166b24d341092946a2348e0800e2a451beac0866"
     },
     {
         "device_id": "IoT-DEV-007",
-        "poly_key": "546627c1cf39af022c7cb8b356c4aa27876d137fa13caebcf1823dc9d4c1a330"
+        "poly_key": "3a18e7ebe0b7fb2eecea70c1b332fe6bc55e2e491412128b3f90ee4214a939b4"
     },
     {
         "device_id": "IoT-DEV-008",
-        "poly_key": "41333479a3479d2a98c87f8194039ced837d417eda72bc08e243c74d6da45925"
+        "poly_key": "6646043c6c656ee98c33d7fd1d03f1b2b3fdaef65738280500778a2c177b46c6"
     },
     {
         "device_id": "IoT-DEV-009",
-        "poly_key": "ac5034e2c39b80c1ee8d62f764415de0dfe76fad3b3f84d346823575367b0c10"
+        "poly_key": "36d90949f2b4513c334a2d5fbd9f4bd8c8c92a1b2e35ba332b8f50ffa6af06a7"
     }
 ]

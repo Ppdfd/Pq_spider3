@@ -254,6 +254,20 @@ python phase2_iiot_encrypt/main.py
 
 ---
 
+## Evaluation Methodology (IEEE Journal Quality)
+
+The evaluation framework follows a two-tiered, hybrid approach designed to meet the rigorous reproducibility and validation standards of IEEE journals.
+
+### 1. Hybrid Simulation Architecture (Real vs. Simulated)
+- **Real (Empirically Grounded):** Base performance constants (e.g., TEE world switch latency `MEASURED_WORLD_SWITCH_MS`, service rates) are derived from real benchmark executions of OP-TEE on QEMU v8 (see `optee_bench/`). Resource profiling (`psutil`) captures live CPU/RAM metrics from the host machine during execution.
+- **Simulated:** Cryptographic primitives (`crypto_primitives/`) and network traversal are simulated in Python. The Spider load-balancing math is executed natively in a discrete-event simulator without requiring a physical deployment of dozens of TrustZone-enabled edge servers, which is the industry standard for large-scale distributed systems research.
+
+### 2. Dual Evaluation Layers (Phases vs. Graphs)
+- **Pipeline Phases (`phaseN_/`):** Validates end-to-end system integration. These scripts run a single, fully-configured scenario (e.g., 10 nodes, 10 devices) to generate holistic total-latency summary tables.
+- **Microbenchmark Graphs (`graphs/`):** Isolates specific operations (e.g., *only* CP-ABE setup) to evaluate scaling behavior (e.g., latency vs. number of attributes). This ensures plot trend lines are precise and free from systemic noise.
+
+---
+
 ## Key Domain Concepts
 
 - **TEE (Trusted Execution Environment)**: Hardware-isolated secure enclave (OP-TEE/ARM TrustZone in this project, NOT Intel SGX)
@@ -261,18 +275,20 @@ python phase2_iiot_encrypt/main.py
 - **EPC (Enclave Page Cache)**: Limited secure memory within TEE; exceeding it triggers expensive page swapping (~12ms per swap)
 - **CP-ABE**: Ciphertext-Policy Attribute-Based Encryption — enables fine-grained access control where decryption requires attributes satisfying a policy
 - **Spider**: The proposed hierarchical scheduler with two levels:
-  - **Level 1 (Inter-Node)**: Routes tasks across fog nodes using SpiderScore (Eq 40)
-  - **Level 2 (Intra-Node)**: Routes tasks across enclaves within a node using EnclaveScore (Eq 46)
+  - **Level 1 (Inter-Node)**: Routes tasks across fog nodes using SpiderScore (Eq 40) with urgency, deadline, and reuse bonuses
+  - **Level 2 (Intra-Node)**: Routes tasks across enclaves within a node using EnclaveScore (Eq 46) with EPC admission control (Eq 49)
 - **PUF**: Physical Unclonable Function — hardware-based device identity
 - **Kyber/Dilithium**: NIST-standardized post-quantum key encapsulation and digital signature algorithms
-- **MFN (Master Fog Node)**: Coordinator that runs the Spider scheduler
+- **MFN (Master Fog Node)**: Coordinator elected via `mfn_election.py` (Eq 112-116)
+- **Root_k**: Aggregation commitment hash binding all enclave-parallel chunk outputs (Eq 81)
+- **D_k (Chunk Manifest)**: Per-chunk metadata (SubID, length, AAD, IV) enabling deterministic decryption (Eq 94)
 - **Offered Load**: Ratio of incoming traffic rate to system capacity (0.70 = 70% utilization, the "balanced" operating point)
 
 ---
 
 ## Common Pitfalls & Important Notes
 
-1. **Phase 4 is NOT a pipeline phase** — Load balancing is evaluated purely through discrete-event simulation in `phase4_load_balance/` (split across `inter_node.py` and `intra_node.py`). The `phase4_load_balance/optee_bench/` subdirectory contains OP-TEE benchmark data.
+1. **Phase 4 is NOT a pipeline phase** — Load balancing is evaluated purely through discrete-event simulation in `phase4_load_balance/` (split across `inter_node.py` and `intra_node.py`). The `phase4_load_balance/optee_bench/` subdirectory contains OP-TEE benchmark data. New modules `mfn_election.py` and `failure_detection.py` implement Section IV and V of the paper.
 
 2. **Phase 3 (Gateway) is asymmetric** — Only "Ours" has a gateway phase. Reference schemes skip it. The `run_all_tests.py` grand summary correctly separates "Core total (1+2+5+6)" from "Ours-full (1+2+3+5+6)" to avoid unfair comparisons.
 
@@ -287,3 +303,7 @@ python phase2_iiot_encrypt/main.py
 7. **OP-TEE, not SGX** — Despite some SGX terminology in citations (EPC, enclave), this project targets OP-TEE on ARM. The `EPC_BUDGET_BYTES` is 29.5 MB (TZDRAM), not SGX's 93 MB.
 
 8. **Resource profiling** — `utils/resource_profiler.py` wraps `psutil` to measure CPU time, wall time, peak RSS, and memory delta per phase.
+
+9. **Phase V outputs multi-chunk Ω** — Phase V now produces enclave-parallel sub-batches with per-chunk keys (`K_chunk`), a chunk manifest (`D_k`), and an aggregation commitment (`Root_k`). Phase VI must parse the manifest and verify `Root_k` before decrypting. Legacy single-chunk Ω is supported for backward compatibility.
+
+10. **Graph 7 has 6 baselines** — Graph 7 now compares: No Fault-Tolerance, Centralized Heartbeat, Full Checkpoint, Round-Robin Recovery, Least-Queue Recovery, and Spider (Ours). The old 3-method names ("No Delegation", "Simple Retry") are deprecated.

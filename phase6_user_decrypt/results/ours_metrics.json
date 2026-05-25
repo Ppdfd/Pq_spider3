@@ -1,7 +1,8 @@
 {
-    "dilithium_verify": 86.37912099993628,
-    "policy_eval": 0.6455159999632087,
-    "cpabe_decrypt": 49.61029499997949,
-    "aes_gcm_decrypt": 1.6011190000426723,
-    "total_user_latency": 159.9965500000735
+    "dilithium_verify": 13.170100000024831,
+    "policy_eval": 0.18309999995835824,
+    "cpabe_decrypt": 8.416399999987334,
+    "root_verify": 0.058399999943503644,
+    "chunk_decrypt": 1.3663999998243526,
+    "total_user_latency": 27.822500000183936
 }
