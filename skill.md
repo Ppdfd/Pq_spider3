@@ -58,14 +58,21 @@ Pq_spider_new/
 │   └── ours.py                  # Only "Ours" has a gateway phase (refs skip it)
 │
 ├── phase4_load_balance/         # Phase 4: Load balancing simulation engine
+│   ├── README.md                # Module documentation
 │   ├── params.py                # SIMULATION_PARAMS — cited constants with derivations
 │   ├── models.py                # WorkloadTask, FogNode, Enclave dataclasses
 │   ├── generators.py            # Task/node/enclave population generators
 │   ├── inter_node.py            # Level 1: inter-node scheduling (Spider, Ref[22/37/39])
 │   ├── intra_node.py            # Level 2: intra-node enclave scheduling (Spider, RR, LQ)
-│   ├── __init__.py              # Re-exports all public symbols
+│   ├── mfn_election.py          # Master Fog Node election (Sec IV, Eq 112-116)
+│   ├── failure_detection.py     # Group-based failure detection & recovery (Sec V, Eq 117-125)
+│   ├── __init__.py              # Re-exports core simulation symbols (not MFN/failure)
 │   └── optee_bench/             # OP-TEE QEMU measurement data
-│       └── loader.py            # Loads measured_values.json
+│       ├── __init__.py
+│       ├── README.md            # Benchmark documentation
+│       ├── loader.py            # Loads measured_values.json
+│       ├── measured_values.json # OP-TEE QEMU benchmark measurements
+│       └── pqspider_bench/      # Source code for the OP-TEE TA benchmark
 │
 ├── phase5_fog_node/             # Phase 5: Fog node CP-ABE processing
 │   ├── main.py
@@ -78,6 +85,7 @@ Pq_spider_new/
 │   └── ref_4.py
 │
 ├── graphs/                      # Graph plotting scripts (Graphs 1–9)
+│   ├── __init__.py              # Package marker
 │   ├── simulation_core.py       # Backward-compat shim (re-exports from phase4_load_balance)
 │   ├── graph1.py – graph9.py    # Individual graph generators
 │   ├── generateTask.py          # Task generation utility
@@ -141,7 +149,7 @@ All simulation parameters are centralized in `config.py`. Sections:
 
 ## Simulation Engine (`phase4_load_balance/`)
 
-The discrete-event simulator is split across 5 focused modules:
+The discrete-event simulator is split across 7 focused modules:
 
 ### `params.py` — Simulation Parameters
 - `SIMULATION_PARAMS` dict with all cited constants (EPC swap cost, contention penalty, rate heterogeneity, startup overheads)
@@ -171,8 +179,31 @@ The discrete-event simulator is split across 5 focused modules:
 - `_drain_queues()` — reclaims EPC memory from completed tasks using explicit finish-time tracking
 - `simulate_intra_node()` — runs one complete intra-node experiment
 
+### `mfn_election.py` — Master Fog Node Election (Section IV, Eq 112-116)
+- `MFNCandidate` dataclass — fog node candidate with capability, memory, latency, trust, and enclave-level state
+- `compute_readiness()` — Eq 113: `R_j = 1 - (β1·avg_enclave_load + β2·ρ_epc + β3·REE_backlog)`, clamped to [0,1] (Eq 114)
+- `compute_score()` — Eq 112: `Score(F_j) = α1·C_j + α2·M_j - α3·N_j + α4·R_j + α5·T_j`
+- `elect_mfn()` — Eq 115-116: stability-aware selection with readiness threshold `τ_readiness ≥ 0.30` and score-change penalty `γ = 0.20`
+- `simulate_mfn_election()` — runs a simulated election with random fog node states
+- Scoring weights: `ALPHA1..5` (Eq 112), `BETA1..3` (Eq 113), `GAMMA_STABILITY` (Eq 115), `TAU_READINESS` (Eq 116)
+
+### `failure_detection.py` — Group-Based Failure Detection (Section V, Eq 117-125)
+- `FogNodeState` dataclass — runtime state for failure detection (heartbeat, epoch, suspicious count)
+- `MonitoringGroup` dataclass — Eq 117: bounded-size monitoring group `G_i = {F_1,...,F_s}`, `3 ≤ s ≤ 7`
+- `DelegationCapsule` dataclass — Eq 124: secure workload recovery capsule `Ξ_k = (ID_k, SubID_k, Prog_k, Meta_k, CT_partial_k, T_k, epoch_k, σ_k)` with HMAC-SHA256 integrity
+- `partition_into_groups()` — Eq 117-119: partitions fog nodes into `g = ⌈N/s⌉` monitoring groups
+- `generate_heartbeat()` — Eq 120: authenticated heartbeat `(ID_j, t, epoch_j, status_j, σ_j)`
+- `check_heartbeat_timeout()` — Eq 121-122: suspicious if `Δt_j > τ_h` (default 50ms)
+- `quorum_failure_detection()` — Eq 123: confirmed failed only if `≥ ⌈s/2⌉` peers independently observe timeout
+- `detect_failures()` — runs quorum-based detection across all monitoring groups
+- `select_recovery_node()` — Eq 125: `F_recover = argmin SpiderScore(F_j, B_k)` (simplified scoring)
+- `simulate_failure_detection()` — end-to-end failure injection + detection + metrics (TPR, FPR, detection time)
+
 ### Important Design: Scheduler–Execution Decoupling
 The scheduler uses **deterministic estimates** while execution adds **stochastic factors** (±30% contention variance, ±20% EPC swap variance, exponential OS jitter). This ensures Spider makes good but imperfect predictions, like a real scheduler operating on stale telemetry.
+
+### Important Design: MFN & Failure Detection are Standalone
+`mfn_election.py` and `failure_detection.py` are **not** re-exported from `__init__.py`. They implement paper Sections IV and V respectively, and are consumed directly by `graphs/graph7.py` (recovery simulation) and by the pipeline phases. The core simulation engine (`params`/`models`/`generators`/`inter_node`/`intra_node`) remains the public API via `__init__.py`.
 
 ### Backward Compatibility
 `graphs/simulation_core.py` remains as a thin shim that re-exports all symbols from `phase4_load_balance.*`. Existing imports from `graphs.simulation_core` continue to work.
