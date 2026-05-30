@@ -141,20 +141,28 @@ distribution from Wang & Zhou [6]."
 
 ---
 
-## Parameter 6: Spider Weights z1=1.0, z2=1.2, z3=0.6, z4=0.4
+## Parameter 6: Spider Weights z1=1.0, z2=0.05, z3=0.50, z4=5.0
 
-### Self-Citation — Sensitivity Analysis (Graph 10)
+### Self-Citation — Empirical Calibration at 70% Operating Point
 **Defense argument:**
-"The weights are derived from the relative cost magnitudes of each
-penalty term at our cited operating point:
-- T_wait baseline ≈ 5ms (queue + service time)
-- P_epc penalty ≈ 12ms (cited EPC swap, Citation B+C)
-- P_cont penalty ≈ 1.13ms (cited world-switch, Citation D+E)
-- A_affinity bonus ≈ 2ms (cache reuse savings)
+"The weights are empirically calibrated to match the relative cost
+magnitudes at the documented 70% operating point (Citation F):
+- T_wait (queue wait):      ~700ms average  ← DOMINANT cost
+- Queue penalty (P_cont):   ~50ms × queue_length (load-balancing term)
+- Contention base:          ~2ms (world-switch overhead)
+- EPC swap:                 ~12ms (when triggered, rare at 70% load)
 
-Therefore z2/z1 = 12/5 ≈ 2.4 (we use 1.2 conservative),
-z3/z1 = 1.13/5 ≈ 0.23 (we use 0.6 to amplify avoidance),
-z4/z1 = 2/5 ≈ 0.4 (matches our value).
+Since queue wait dominates at this operating point:
+- z1 = 1.0 (baseline: queue wait is the primary cost)
+- z2 = 0.05 (EPC penalty ~12ms is ~1/58 of queue wait; kept small
+  to avoid overshadowing queue-based load balancing)
+- z3 = 0.50 (queue-balancing term scaled to make Spider behave
+  like Join-Shortest-Queue (JSQ, optimal under M/M/n) when EPC
+  and rate signals don't dominate)
+- z4 = 5.0 (cache warmth bonus amplified because reusing a warm
+  enclave saves ~50ms of crypto state reconstruction; this must
+  be large enough to counteract the queue-wait penalty to be
+  effective)
 
 We provide sensitivity analysis (Graph 10) showing Spider wins at
 ALL parameter values in the swept range, demonstrating the result

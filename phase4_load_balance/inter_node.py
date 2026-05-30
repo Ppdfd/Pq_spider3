@@ -4,11 +4,21 @@ Inter-Node Load Balancing for PQ-SPIDER
 
 Level 1 scheduling: selects which fog node receives each task batch.
 Implements Spider (Ours) and three reference algorithms (Ref[22], Ref[37], Ref[39]).
+
+NOTE on Eq 50-51 (Score Smoothing / Stability Control):
+  The paper defines exponential score smoothing (Eq 50) and threshold-based
+  update suppression (Eq 51) for continuous scheduling. These are intentionally
+  omitted from the simulation because the discrete-event model processes tasks
+  sequentially with full state visibility at each scheduling decision, making
+  EMA smoothing unnecessary. In a real deployment, Eq 50-51 would filter
+  stale/noisy telemetry from asynchronous heartbeat collection.
 """
 
 from typing import List
 
 import numpy as np
+
+import config
 
 from .params import SIMULATION_PARAMS
 from .models import WorkloadTask, FogNode, clone_nodes
@@ -79,20 +89,20 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
                           + rng.normal(0.0, 1.5))
 
     elif algorithm == "Spider (Ours)":
-        import config
         scores = []
         for n in nodes:
             # Spider models the exact split TEE -> REE critical path
-            # Eq 35: T_wait approximation
+            # Eq 35: T_wait approximation (without EPC penalty, which is scored separately)
             net_est = n.network_ms
-            tee_est = (task.tee_work / n.tee_rate) + 2.6 + epc_pressure_penalty(task, n)
-            ree_est = (task.ree_work / n.ree_rate) + 1.8
+            tee_est = (task.tee_work / n.tee_rate) + SIMULATION_PARAMS["tee_startup_ms"]
+            ree_est = (task.ree_work / n.ree_rate) + SIMULATION_PARAMS["ree_startup_ms"]
             tee_finish = max(task.arrival_ms + net_est, n.tee_available_ms) + tee_est
-            completion_est = max(tee_finish, n.ree_available_ms) + ree_est + 3.6
+            completion_est = max(tee_finish, n.ree_available_ms) + ree_est + SIMULATION_PARAMS["finalization_ms"]
 
             T_wait = completion_est - task.arrival_ms
 
-            # Eq 36: P_epc (already included via epc_pressure_penalty above)
+            # Eq 36: P_epc (scored as an independent term with weight w3)
+            P_epc = epc_pressure_penalty(task, n)
             # Eq 37: P_cap — capability penalty
             p_cap = config.W4_CAP * max(0.0, task.crypto_intensity - n.capability)
             # Eq 38: P_trust — trust penalty
@@ -114,6 +124,7 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
             #                    + w5*P_trust - w6*eta*U_j - w7*delta*mu_TEE - w8*R_reuse
             score = (config.W1_WAIT * T_wait
                      + config.W2_LATENCY * net_est
+                     + config.W3_EPC * P_epc
                      + p_cap + p_trust
                      - config.W6_URGENCY * eta_k * n.trust
                      - config.W7_DEADLINE * delta_k * n.tee_rate
@@ -132,13 +143,13 @@ def execute_task(node: FogNode, task: WorkloadTask, rng: np.random.Generator) ->
     net = max(0.5, node.network_ms + rng.normal(0.0, 0.12 * node.network_ms))
     arrival_at_node = task.arrival_ms + net
 
-    tee_service = (task.tee_work / node.tee_rate) * float(rng.lognormal(0.0, 0.055)) + 2.6 + epc_pressure_penalty(task, node)
-    ree_service = (task.ree_work / node.ree_rate) * float(rng.lognormal(0.0, 0.060)) + 1.8
+    tee_service = (task.tee_work / node.tee_rate) * float(rng.lognormal(0.0, 0.055)) + SIMULATION_PARAMS["tee_startup_ms"] + epc_pressure_penalty(task, node)
+    ree_service = (task.ree_work / node.ree_rate) * float(rng.lognormal(0.0, 0.060)) + SIMULATION_PARAMS["ree_startup_ms"]
 
     tee_start = max(arrival_at_node, node.tee_available_ms)
     tee_finish = tee_start + tee_service
     ree_start = max(tee_finish, node.ree_available_ms)
-    finish = ree_start + ree_service + max(0.3, rng.normal(3.6, 0.45))
+    finish = ree_start + ree_service + max(0.3, rng.normal(SIMULATION_PARAMS["finalization_ms"], 0.45))
 
     node.tee_available_ms = tee_finish
     node.ree_available_ms = finish

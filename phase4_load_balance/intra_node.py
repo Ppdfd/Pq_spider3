@@ -11,6 +11,8 @@ from typing import List
 
 import numpy as np
 
+import config
+
 from .params import SIMULATION_PARAMS
 from .models import WorkloadTask, Enclave, clone_enclaves
 from .generators import generate_tasks, _load_phase5_service_ms
@@ -40,7 +42,7 @@ def _enclave_score_eq46(
     # Estimated service time on this enclave — use MEASURED Phase 5 base,
     # scaled by enclave rate (consistent with execute_on_enclave)
     base_ms = _load_phase5_service_ms()
-    baseline_rate = 0.393  # QEMU measured baseline (393 ops/s / 1000)
+    baseline_rate = config.MEASURED_BASELINE_RATE
     service_est = base_ms * (baseline_rate / max(0.01, enc.service_rate))
 
     # Contention estimate: world-switch cost per unit normalized load [A,D].
@@ -84,8 +86,7 @@ def _enclave_score_eq46(
     # impossible to distinguish "barely warm" from "very warm" enclaves.
     # Now uses fractional affinity: warmer cache → larger bonus.
     # Window is config.ENCLAVE_AFFINITY_WINDOW (default 20).
-    import config
-    affinity_window = getattr(config, 'ENCLAVE_AFFINITY_WINDOW', 20)
+    affinity_window = config.ENCLAVE_AFFINITY_WINDOW
     A_affin = min(1.0, enc.recent_count / max(1.0, affinity_window))
 
     return z1 * T_wait + z2 * P_epc + z3 * P_cont - z4 * A_affin
@@ -106,7 +107,6 @@ def choose_enclave(
     Least-Queue:  picks enclave with shortest queue (ignores EPC/contention)
     Spider (Eq 46): full EnclaveScore with completion estimate + EPC + contention
     """
-    import config
 
     if algorithm == "Round-Robin":
         return enclaves[task_idx % len(enclaves)]
@@ -116,7 +116,7 @@ def choose_enclave(
 
     elif algorithm == "Spider (Ours)":
         # Eq 49: Admission control — M_free >= alpha * M_req (alpha > 1)
-        alpha_epc = getattr(config, 'ALPHA_EPC_SAFETY', 1.15)
+        alpha_epc = config.ALPHA_EPC_SAFETY
         feasible = [e for e in enclaves if e.epc_available >= alpha_epc * epc_req]
         if not feasible:
             feasible = enclaves  # Graceful degradation if all overloaded
@@ -128,8 +128,8 @@ def choose_enclave(
                 e, task, epc_req,
                 tau=0.5,   # Lower threshold for intra-node (smaller EPC per enclave)
                 z1=config.Z1_ENC_WAIT,
-                z2=getattr(config, 'Z2_ENC_EPC', 0.05),       # EPC penalty (small at 70% load)
-                z3=getattr(config, 'Z3_ENC_CONTENTION', 0.30),# contention secondary
+                z2=config.Z2_ENC_EPC,
+                z3=config.Z3_ENC_CONTENTION,
                 z4=config.Z4_ENC_AFFIN,
             )
             if sc < best_score:
@@ -165,7 +165,7 @@ def execute_on_enclave(
     # Service time from Phase 5 measured fog latency (56.35ms baseline) [A],
     # scaled by enclave heterogeneity: fast enclaves finish faster.
     base_ms = _load_phase5_service_ms()
-    baseline_rate = 0.393  # QEMU measured baseline (393 ops/s / 1000) [A]
+    baseline_rate = config.MEASURED_BASELINE_RATE
     rate_ratio = baseline_rate / max(0.01, enc.service_rate)
     service_ms = base_ms * rate_ratio * float(rng.lognormal(0.0, 0.06))
 
@@ -208,8 +208,7 @@ def execute_on_enclave(
     # Without this cap, recent_count grows unbounded and every enclave
     # ends up with recent_count > 0, neutralizing the A_affin bonus.
     # Cap defined in config.ENCLAVE_AFFINITY_WINDOW (default 20).
-    import config
-    affinity_window = getattr(config, 'ENCLAVE_AFFINITY_WINDOW', 20)
+    affinity_window = config.ENCLAVE_AFFINITY_WINDOW
     enc.recent_count = min(affinity_window, enc.recent_count + 1)
 
     return float(finish - arrival)
@@ -258,7 +257,6 @@ def simulate_intra_node(
     Run one intra-node scheduling experiment.
     All algorithms get same task stream + same initial enclave state.
     """
-    import config
 
     alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
     base_rng = np.random.default_rng(seed)
@@ -266,7 +264,7 @@ def simulate_intra_node(
 
     tasks = generate_tasks(
         n_tasks, base_rng,
-        offered_load=getattr(config, 'INTRA_NODE_OFFERED_LOAD', 0.70),
+        offered_load=config.INTRA_NODE_OFFERED_LOAD,
     )
     enclaves = clone_enclaves(base_enclaves)
     epc_req = config.PACKET_EPC_BYTES * 28

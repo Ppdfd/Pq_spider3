@@ -12,6 +12,8 @@ from typing import Dict, List
 
 import numpy as np
 
+import config
+
 from .params import SIMULATION_PARAMS
 from .models import WorkloadTask, FogNode, Enclave
 
@@ -153,7 +155,6 @@ def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave
     Service rate:    from QEMU measured service_rate (393 ops/s → 0.393) [A].
     Heterogeneity:   rate × cited range from SIMULATION_PARAMS.
     """
-    import config
     from .optee_bench.loader import load_measurements
 
     measurements = load_measurements(config)

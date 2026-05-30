@@ -88,6 +88,42 @@ BETA2_ATTR     = 0.5     # Attribute count factor
 BETA3_DEPTH    = 0.3     # Policy depth factor
 # EPC thresholds
 EPC_PRESSURE_TAU = 0.8   # tau threshold for EPC pressure (Eq 33)
+# EPC admission control (Eq 49): M_free >= ALPHA_EPC_SAFETY * M_req
+ALPHA_EPC_SAFETY = 1.15  # safety margin for enclave EPC admission
+
+# Baseline rate: normalized service rate from OP-TEE QEMU measurements.
+# Used by intra-node scheduler and executor to scale enclave service times.
+MEASURED_BASELINE_RATE = MEASURED_SERVICE_RATE / 1000.0  # 1265.82/1000 = 1.26582
+
+# ---------------------------------------------------------
+# 4b. FAILURE DETECTION & RECOVERY (SECTION V, Eq 117-125)
+# ---------------------------------------------------------
+# Monitoring group bounds (Eq 117-118)
+GROUP_SIZE_MIN     = 3       # minimum peers per monitoring group
+GROUP_SIZE_MAX     = 7       # maximum peers per monitoring group
+DEFAULT_GROUP_SIZE = 5       # preferred group size s
+# Heartbeat timeout (Eq 121-122)
+HEARTBEAT_TIMEOUT_MS = 50.0  # tau_h: ms before a peer is flagged suspicious
+# Quorum fraction (Eq 123): failure confirmed if >= ceil(s * QUORUM_FRACTION)
+QUORUM_FRACTION    = 0.5
+
+# ---------------------------------------------------------
+# 4c. MFN ELECTION (SECTION IV, Eq 112-116)
+# ---------------------------------------------------------
+# Scoring weights (Eq 112)
+ALPHA1_CAPABILITY = 0.30
+ALPHA2_MEMORY     = 0.20
+ALPHA3_NETWORK    = 0.15
+ALPHA4_READINESS  = 0.25
+ALPHA5_TRUST      = 0.10
+# Readiness weights (Eq 113)
+MFN_BETA1_ENCLAVE_QUEUE = 0.40
+MFN_BETA2_EPC_PRESSURE  = 0.35
+MFN_BETA3_REE_BACKLOG   = 0.25
+# Stability penalty (Eq 115)
+GAMMA_STABILITY   = 0.20
+# Readiness threshold (Eq 116)
+TAU_READINESS     = 0.30
 
 # ---------------------------------------------------------
 # 5. DATA SIZES & CRYPTOGRAPHY

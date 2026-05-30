@@ -15,6 +15,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import config
+
 
 @dataclass
 class MFNCandidate:
@@ -32,24 +34,6 @@ class MFNCandidate:
     prev_score: float = 0.0
 
 
-# ── Scoring Weights (Eq 112) ──
-ALPHA1_CAPABILITY = 0.30
-ALPHA2_MEMORY     = 0.20
-ALPHA3_NETWORK    = 0.15
-ALPHA4_READINESS  = 0.25
-ALPHA5_TRUST      = 0.10
-
-# ── Readiness Weights (Eq 113) ──
-BETA1_ENCLAVE_QUEUE = 0.40
-BETA2_EPC_PRESSURE  = 0.35
-BETA3_REE_BACKLOG   = 0.25
-
-# ── Stability Penalty (Eq 115) ──
-GAMMA_STABILITY = 0.20
-
-# ── Readiness Threshold (Eq 116) ──
-TAU_READINESS = 0.30
-
 
 def compute_readiness(candidate: MFNCandidate) -> float:
     """
@@ -63,9 +47,9 @@ def compute_readiness(candidate: MFNCandidate) -> float:
         avg_enclave_load = 0.0
 
     R_j = 1.0 - (
-        BETA1_ENCLAVE_QUEUE * avg_enclave_load
-        + BETA2_EPC_PRESSURE * candidate.epc_pressure
-        + BETA3_REE_BACKLOG * candidate.ree_backlog_ratio
+        config.MFN_BETA1_ENCLAVE_QUEUE * avg_enclave_load
+        + config.MFN_BETA2_EPC_PRESSURE * candidate.epc_pressure
+        + config.MFN_BETA3_REE_BACKLOG * candidate.ree_backlog_ratio
     )
     # Eq 114: 0 <= R_j <= 1
     return max(0.0, min(1.0, R_j))
@@ -77,11 +61,11 @@ def compute_score(candidate: MFNCandidate) -> float:
     """
     R_j = compute_readiness(candidate)
     return (
-        ALPHA1_CAPABILITY * candidate.capability
-        + ALPHA2_MEMORY * candidate.enclave_memory
-        - ALPHA3_NETWORK * candidate.network_latency
-        + ALPHA4_READINESS * R_j
-        + ALPHA5_TRUST * candidate.trust
+        config.ALPHA1_CAPABILITY * candidate.capability
+        + config.ALPHA2_MEMORY * candidate.enclave_memory
+        - config.ALPHA3_NETWORK * candidate.network_latency
+        + config.ALPHA4_READINESS * R_j
+        + config.ALPHA5_TRUST * candidate.trust
     )
 
 
@@ -94,7 +78,7 @@ def elect_mfn(candidates: List[MFNCandidate]) -> Optional[MFNCandidate]:
     Where F_candidate = {F_j | R_j >= tau_readiness}
     """
     # Eq 116: Filter by readiness threshold
-    eligible = [c for c in candidates if compute_readiness(c) >= TAU_READINESS]
+    eligible = [c for c in candidates if compute_readiness(c) >= config.TAU_READINESS]
 
     if not eligible:
         # Fallback: select from all candidates if none meet threshold
@@ -110,7 +94,7 @@ def elect_mfn(candidates: List[MFNCandidate]) -> Optional[MFNCandidate]:
         score = compute_score(c)
         # Eq 115: Stability penalty = gamma * |Score(t) - Score(t-1)|
         delta_score = abs(score - c.prev_score)
-        adjusted_score = score - GAMMA_STABILITY * delta_score
+        adjusted_score = score - config.GAMMA_STABILITY * delta_score
 
         if adjusted_score > best_adjusted_score:
             best_adjusted_score = adjusted_score
@@ -151,5 +135,5 @@ def simulate_mfn_election(
         "elected_node_id": mfn.node_id if mfn else None,
         "scores": {c.node_id: compute_score(c) for c in candidates},
         "readiness": {c.node_id: compute_readiness(c) for c in candidates},
-        "n_eligible": sum(1 for c in candidates if compute_readiness(c) >= TAU_READINESS),
+        "n_eligible": sum(1 for c in candidates if compute_readiness(c) >= config.TAU_READINESS),
     }
