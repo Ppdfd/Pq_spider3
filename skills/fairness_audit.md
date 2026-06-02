@@ -12,7 +12,14 @@ description: >-
    - Do they share the same fog node capability stats?
    - Is the telemetry delay identical across all methods?
 3. **Verify Failure-Rate Responsiveness**: When checking fault tolerance graphs (e.g. Graph 10), ensure that metrics like detection time, false positive rate, and control overhead correctly scale with the failure rate. Flat lines are usually indicative of synthetic bias.
-4. **Report Findings**: If bias is found, write an honest audit report using the `analysis_results.md` artifact, clearly separating what is fair and what is flawed.
+4. **Verify whether it is correctly derive from papers**
+checking if the graphs or simulation code are correctly derived from the papers.
+5. **Report Findings**: If bias is found, write an honest audit report using the `analysis_results.md` artifact, clearly separating what is fair and what is flawed.
+write it in structure
+-overview
+-report what is the difference from papers
+-report what is not correctly derive from papers
+-suggestion to fix
 
 ## Constraints
 - **Never** hide or downplay bias in the codebase. If Spider-FT has an unfair advantage, explicitly call it out.
