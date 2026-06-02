@@ -76,6 +76,58 @@ MODE_SEED_OFFSET = {
     "spider_cache": 307,
 }
 
+# ── Pre-measured CP-ABE encryption cost table ──
+# Derived from actual LatticeCPABE.encrypt() calls, NOT hardcoded.
+# generate_graphs.md: "Never assume the runtime...
+# the code must run logic to get the runtime."
+_CPABE_COST_TABLE: dict | None = None
+
+
+def _measure_cpabe_costs() -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Pre-measure actual CP-ABE encryption cost for representative
+    attribute counts.  Results are cached for the lifetime of the
+    process so the simulation can interpolate without re-running
+    crypto for every task.
+    """
+    import os
+    import time as _time
+    from crypto_primitives.cp_abe import LatticeCPABE
+
+    global _CPABE_COST_TABLE
+    if _CPABE_COST_TABLE is not None:
+        return _CPABE_COST_TABLE["attrs"], _CPABE_COST_TABLE["times"]
+
+    sample_attrs = np.array([5, 10, 15, 20, 25, 30, 35, 40, 45, 50])
+    measured_times = np.zeros(len(sample_attrs))
+    n_warmup = 1
+    n_measure = 3
+
+    for idx, n_attr in enumerate(sample_attrs):
+        universe = [f"Attr{i}" for i in range(int(n_attr))]
+        policy = {"type": "AND", "attributes": universe}
+        aa = LatticeCPABE(n=256, q=3329)
+        aa.setup()
+        for a in universe:
+            aa.hash_attribute(a)
+        aa.keygen({}, universe)
+
+        # Warm up CPU caches
+        for _ in range(n_warmup):
+            aa.encrypt(os.urandom(32), policy)
+
+        # Measure
+        times = []
+        for _ in range(n_measure):
+            k = os.urandom(32)
+            t0 = _time.perf_counter()
+            aa.encrypt(k, policy)
+            times.append((_time.perf_counter() - t0) * 1000)
+        measured_times[idx] = float(np.median(times))
+
+    _CPABE_COST_TABLE = {"attrs": sample_attrs, "times": measured_times}
+    return sample_attrs, measured_times
+
 
 def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float, float]:
     """
@@ -88,13 +140,16 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
     nodes = make_cache_nodes(mode, rng)
     arrivals = np.sort(rng.uniform(0, 700.0, task_count))
 
+    # Derive service time from measured CP-ABE crypto (not hardcoded)
+    ref_attrs, ref_times = _measure_cpabe_costs()
+
     latencies: List[float] = []
     hits = 0
 
     for arrival in arrivals:
         attrs = int(rng.integers(8, 46))
         policy_id = select_policy(rng)
-        cpabe_base = 8.5 + 0.34 * attrs + 0.0065 * (attrs ** 2)
+        cpabe_base = float(np.interp(attrs, ref_attrs, ref_times))
 
         if mode == "no_cache":
             node = min(nodes, key=lambda n: max(0.0, n.available_ms - arrival) + n.network_ms)

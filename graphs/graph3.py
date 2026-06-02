@@ -112,5 +112,3 @@ def graph3_cpabe_encryption(rng: np.random.Generator, reps: int = 8) -> Dict[str
         "graph3_cpabe_encryption_fog",
     )
     return data
-
-

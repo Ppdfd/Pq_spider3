@@ -163,10 +163,12 @@ G2_NUM_FOGS = 5
 # Graph 3: CP-ABE Encryption Latency at Fog Node
 G3_NUM_TASKS = 20
 G3_ATTR_RANGE = list(range(5, 55, 5))
+G3_REPS = 3
 
 # Graph 4: User Decryption Latency
 G4_NUM_TASKS = 20
 G4_ATTR_RANGE = list(range(5, 55, 5))
+G4_REPS = 3
 
 # Graph 5: Load Balancing Latency (Sweeps Number of Fog Nodes)
 G5_NUM_TASKS = 500
@@ -176,12 +178,24 @@ G5_NUM_FOGS = [2, 4, 6, 8, 10, 12]
 G6_NUM_TASKS = 500
 G6_NUM_FOGS = [2, 4, 6, 8, 10, 12]
 
-# Graph 7: Recovery Latency
-G7_NUM_TASKS = 500
-G7_NUM_FOGS = 20
-G7_FAILURE_RATES = [5, 10, 15, 20, 25, 30, 35, 40]
 
-# Graph 8 & 9: Intra-Node Scheduling & Queue State Diagnosis
-G8_NUM_TASKS = 500
-G8_NUM_TEES = 4
-G8_SPREAD_FACTORS = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
+# Graph 7: Intra-Node Scheduling & Queue State Diagnosis
+G7_NUM_TASKS = 500
+G7_NUM_TEES = 4
+G7_SPREAD_FACTORS = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
+
+# Graph 8: Recovery Latency vs Number of Fog Nodes
+G8_FOG_COUNTS = [10, 20, 30, 40, 50]
+G8_FAILURE_RATE = 0.15
+G8_REPS = 5
+
+# Graph 9: Task Completion Ratio vs Failure Rate
+G9_NUM_FOGS = 30
+G9_FAILURE_RATES = [0.05, 0.10, 0.15, 0.20, 0.25]
+G9_REPS = 5
+
+# Fault-Tolerance Baselines (Section VII-C)
+CHECKPOINT_INTERVAL_MS = 100.0
+CHECKPOINT_SYNC_OVERHEAD_MS = 15.0
+CENTRALIZED_EXTRA_DELAY_MS = 8.0
+

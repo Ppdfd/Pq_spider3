@@ -11,9 +11,9 @@ from graphs.graph3 import graph3_cpabe_encryption
 from graphs.graph4 import graph4_cpabe_decryption
 from graphs.graph5 import graph_load_balancing
 from graphs.graph6 import graph6_heterogeneous_fog
-from graphs.graph7 import graph7_recovery
-from graphs.graph8 import graph8_intra_enclave, run_graph8_experiment
-from graphs.graph9 import graph9_queue_state
+from graphs.graph7 import graph7_intra_enclave, run_graph7_experiment
+from graphs.graph8 import graph8_recovery_latency
+from graphs.graph9 import graph9_task_completion
 
 def run_all_graphs():
     rng = set_global_seed(GLOBAL_SEED)
@@ -39,22 +39,23 @@ def run_all_graphs():
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
     print("  * Graph 5 generated (phase4)")
 
-    graph6_heterogeneous_fog()
+    graph6_heterogeneous_fog(rng)
     print("  * Graph 6 generated (phase4)")
 
-    graph7_recovery(rng)
-    print("  * Graph 7 generated (phase5)")
+    # Graph 7: task-count sweep (runs its own simulations)
+    graph7_intra_enclave(rng)
+    print("  * Graph 7 generated (phase4)")
 
-    # Graph 8: task-count sweep (runs its own simulations)
-    graph8_intra_enclave(rng)
-    print("  * Graph 8 generated (phase4)")
+    # ── Single experiment for all diagnostic views (7, 11, 12, 13, 14) ──
+    results, enclaves = run_graph7_experiment(rng)
+    print("  * Graph 7 experiment complete (1 run x 3 algorithms)")
 
-    # ── Single experiment for all diagnostic views (9, 11, 12, 13, 14) ──
-    results, enclaves = run_graph8_experiment(rng)
-    print("  * Graph 8 experiment complete (1 run x 3 algorithms)")
+    graph8_recovery_latency(rng)
+    print("  * Graph 8 generated (fault-tolerance)")
 
-    graph9_queue_state(results, enclaves)
-    print("  * Graph 9 generated (routing intelligence)")
+    graph9_task_completion(rng)
+    print("  * Graph 9 generated (fault-tolerance)")
+
     print("=" * 72)
 
 if __name__ == "__main__":
