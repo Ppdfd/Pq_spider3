@@ -278,7 +278,16 @@ def select_recovery_node(
         task_for_sched.ree_work *= restart_fraction
         task_for_sched.epc_req_mb *= restart_fraction
     else:
-        # Create a representative workload task
+        # Defensive fallback: create a representative workload task.
+        # In normal graph8/9 operation, `task` is always provided.
+        # These values approximate the median of generate_tasks() output
+        # and exist only to prevent crashes if the API is called without
+        # a task argument (e.g., from simulate_failure_detection()).
+        import warnings
+        warnings.warn(
+            "select_recovery_node() called without task; using synthetic fallback",
+            stacklevel=2,
+        )
         task_for_sched = WorkloadTask(
             arrival_ms=decision_time,
             records=15,

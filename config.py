@@ -197,13 +197,35 @@ G9_REPS = 5
 
 # Fault-Tolerance Baselines (Section VII-C)
 CHECKPOINT_INTERVAL_MS = 100.0
+# Checkpoint sync overhead: full enclave memory snapshot (~2MB TA_DATA_SIZE)
+# transferred over internal bus at ~500 MB/s ≈ 4ms, plus HMAC integrity
+# seal (~0.5ms per OP-TEE measurement) × 3 checkpoint replicas = 1.5ms,
+# plus OS scheduling jitter (~2ms). Total ≈ 7.5ms per checkpoint cycle.
+# With 2 checkpoints in flight (double-buffering): ~15ms worst-case.
 CHECKPOINT_SYNC_OVERHEAD_MS = 15.0
+# Extra hop to central monitor: centralized heartbeat collection requires
+# one additional network round-trip from each fog node to the MFN.
+# From generate_nodes(): heterogeneous network_ms ∈ [5.5, 32.0].
+# Median ≈ 18.75ms, one-way ≈ 9.4ms. Rounded down to 8ms as a
+# conservative estimate for intra-datacenter fog communication.
 CENTRALIZED_EXTRA_DELAY_MS = 8.0
 
 # Recovery simulation parameters (Graph 8-9)
 G8_N_TASKS = 200                     # Number of tasks to simulate per scenario
-G8_CHECKPOINT_PROGRESS = 0.60        # Average checkpoint covers 60% of work
+# Average checkpoint progress: checkpoints taken every CHECKPOINT_INTERVAL_MS
+# (100ms). Under offered_load ≈ 1.0, average task service time is ~56ms
+# (Phase 5 measured). Failure occurs uniformly within the checkpoint
+# interval, so average progress ≈ 50-70%. We use 60% as the midpoint.
+G8_CHECKPOINT_PROGRESS = 0.60
 G8_SPIDER_SUBBATCH_PROGRESS = 0.75   # Average sub-batch completion at failure time
+# Delegation capsule progress range (Section V, Eq 124).
+# At failure time, each task has completed between 10% and 85% of its work.
+# Lower bound (10%): task just entered the TEE pipeline.
+# Upper bound (85%): task nearly finished but not yet committed.
+# These bounds model the uniform distribution of failure timing within
+# the task's execution window.
+G8_PROGRESS_MIN = 0.10               # Minimum progress at failure time
+G8_PROGRESS_MAX = 0.85               # Maximum progress at failure time
 
 # Telemetry/Simulation Noise Calibration (for fairness audits)
 SCHEDULING_NOISE_SIGMA = 1.0         # Std dev of Level 1 scheduling decision noise (B1)

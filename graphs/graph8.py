@@ -233,7 +233,11 @@ def _run_heartbeat_simulation(
                     round_detected.append(s.node_id)
 
             if round_detected:
-                detection_time = current_ms + extra_delay
+                # NOTE: extra_delay is already included in heartbeat jitter
+                # (line 206), so we do NOT add it again here. The centralized
+                # monitor's extra network hop is modeled as slower heartbeat
+                # arrival, not as a post-detection processing delay.
+                detection_time = current_ms
                 declared_failed_ids.extend(round_detected)
                 for nid in round_detected:
                     if nid not in failed_set:
@@ -268,7 +272,11 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
 
     # Shared scenario inputs
     task_rng = np.random.default_rng(seed)
-    # Scale offered load dynamically with the number of nodes to maintain uniform utilization
+    # Scale offered load dynamically with the number of nodes to maintain
+    # approximately uniform per-node utilization across different cluster
+    # sizes. Without this, larger clusters are under-utilized and smaller
+    # clusters are over-saturated, making latency comparisons misleading.
+    # Base rate: 1.0 at 5 nodes → each node gets ~40 tasks from 200 total.
     offered_load = 1.0 * (n_nodes / 5.0)
     tasks = generate_tasks(n_tasks, task_rng, offered_load=offered_load)
 
@@ -276,7 +284,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
     assignments = _assign_tasks_to_nodes(tasks, n_nodes, assign_rng)
 
     progress_rng = np.random.default_rng(seed + 555)
-    progress = [float(progress_rng.uniform(0.1, 0.85)) for _ in tasks]
+    progress = [float(progress_rng.uniform(config.G8_PROGRESS_MIN, config.G8_PROGRESS_MAX)) for _ in tasks]
 
     fail_rng = np.random.default_rng(seed + 999)
     n_failures = max(1, int(n_nodes * failure_rate))
@@ -354,10 +362,16 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                         node = best.fog_node
                     elif strategy == "Round-Robin":
                         node = alive_states[idx % len(alive_states)].fog_node
+                    elif strategy == "No FT":
+                        continue  # Dropped — no fault awareness
                     else:
-                        if strategy == "No FT":
-                            continue  # Dropped
-                        node = alive_states[int(strat_rng.integers(0, len(alive_states)))].fog_node
+                        # Centralized HB / Full Checkpoint: use min-latency
+                        # selection consistent with centralized monitoring
+                        # (same heuristic as Ref[22] OLB scheduling)
+                        node = min(
+                            [s.fog_node for s in alive_states],
+                            key=lambda n: n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - task.arrival_ms)
+                        )
 
                 total_lat = execute_task(node, task, strat_rng)
                 if total_lat <= task.deadline_ms:
@@ -386,17 +400,21 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                     control_msgs += 3
                 elif strategy == "Centralized HB":
                     restart_fraction = 1.0
-                    node = alive_states[int(strat_rng.integers(0, len(alive_states)))].fog_node
-                    control_msgs = len(states)
+                    # Centralized: min-latency selection (same as Ref[22] OLB)
+                    node = min(
+                        [s.fog_node for s in alive_states],
+                        key=lambda n: n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms))
+                    )
+                    control_msgs += len(states)  # O(N) per heartbeat round
                 elif strategy == "Round-Robin":
                     restart_fraction = 1.0
                     node = alive_states[idx % len(alive_states)].fog_node
-                    control_msgs = len(states)
+                    control_msgs += len(states)  # O(N) per heartbeat round
                 elif strategy == "Least-Queue":
                     restart_fraction = 1.0
                     best = min(alive_states, key=lambda s: s.fog_node.assigned_count)
                     node = best.fog_node
-                    control_msgs = len(states)
+                    control_msgs += len(states)  # O(N) per heartbeat round
                 else:
                     continue
 
