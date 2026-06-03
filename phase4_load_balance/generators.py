@@ -129,6 +129,9 @@ def generate_nodes(count: int, heterogeneous: bool, rng: np.random.Generator) ->
             trust = float(rng.normal(0.97, 0.008))
             energy_factor = float(rng.normal(1.0, 0.03))
 
+        policy_cached = bool(rng.random() < 0.30)
+        kyber_cached = bool(rng.random() < 0.30)
+
         nodes.append(
             FogNode(
                 node_id=node_id,
@@ -138,6 +141,8 @@ def generate_nodes(count: int, heterogeneous: bool, rng: np.random.Generator) ->
                 epc_total_mb=max(64.0, epc_total),
                 trust=float(np.clip(trust, 0.50, 1.0)),
                 energy_factor=max(0.25, energy_factor),
+                policy_cached=policy_cached,
+                kyber_cached=kyber_cached,
             )
         )
     return nodes
@@ -188,14 +193,10 @@ def generate_enclaves(n_enclaves: int, rng: np.random.Generator) -> List[Enclave
         # Heterogeneity: simulate realistic distribution of background TAs.
         # Per Wang & Zhou [6]: production fog enclaves see 35-70% EPC
         # utilization typically. We model 1/3 lightly loaded, 1/3 moderate,
-        # 1/3 heavy. The previous (10/45/85) split pre-saturated 1/3 of
-        # enclaves causing degenerate scheduling regime.
-        if i % 3 == 0:
-            epc_usable = epc_total_i * 0.90   # lightly loaded
-        elif i % 3 == 1:
-            epc_usable = epc_total_i * 0.65   # moderate load
-        else:
-            epc_usable = epc_total_i * 0.40   # heavy load
+        # 1/3 heavy.
+        # AUDIT FIX: Randomized loading from probability distribution using the seed (B5).
+        load_choice = float(rng.choice([0.90, 0.65, 0.40]))
+        epc_usable = epc_total_i * load_choice
         
         # Add slight jitter for tasks
         prior_tasks = int(rng.integers(0, 6))

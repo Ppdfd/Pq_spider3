@@ -21,7 +21,7 @@ import hashlib
 import numpy as np
 
 import config
-from .models import FogNode
+from .models import FogNode, WorkloadTask
 from .generators import generate_nodes
 
 
@@ -254,26 +254,54 @@ def epc_pressure_penalty_ratio(node: FogNode) -> float:
 def select_recovery_node(
     states: List[FogNodeState],
     rng: np.random.Generator,
+    task: Optional[WorkloadTask] = None,
+    decision_time: float = 0.0,
+    restart_fraction: float = 1.0,
 ) -> Optional[FogNodeState]:
     """
     Eq 125: F_recover = argmin_{F_j in F_alive} SpiderScore(F_j, B_k)
 
-    Selects the best alive node for recovery by scoring each node's
-    :attr:`fog_node` with ``config.W*`` weights (lower is better).
+    Selects the best alive node for recovery by scoring candidates using the
+    exact same scheduler (choose_node) as normal load balancing (Eq 40).
     """
     candidates = [s for s in states
                   if s.is_alive and not s.declared_failed]
     if not candidates:
         return None
 
-    best_state = None
-    best_score = float("inf")
+    import copy
+    if task is not None:
+        # Scale task requirements based on restart fraction and set arrival to decision time
+        task_for_sched = copy.copy(task)
+        task_for_sched.arrival_ms = decision_time
+        task_for_sched.tee_work *= restart_fraction
+        task_for_sched.ree_work *= restart_fraction
+        task_for_sched.epc_req_mb *= restart_fraction
+    else:
+        # Create a representative workload task
+        task_for_sched = WorkloadTask(
+            arrival_ms=decision_time,
+            records=15,
+            attrs=25,
+            policy_depth=4,
+            payload_kb=20.0,
+            risk=0.5,
+            deadline_ms=250.0,
+            tee_work=20.0 * restart_fraction,
+            ree_work=15.0 * restart_fraction,
+            epc_req_mb=32.0 * restart_fraction,
+        )
+
+    # Use the choose_node scheduling function directly to compute the exact SpiderScore (Eq 125 / Eq 40)
+    from .inter_node import choose_node
+    candidate_nodes = [s.fog_node for s in candidates]
+    best_node = choose_node(candidate_nodes, task_for_sched, "Spider (Ours)", rng)
+
+    # Find the FogNodeState corresponding to the selected FogNode
     for s in candidates:
-        score = _recovery_spider_score(s.fog_node) + rng.uniform(0.0, 0.5)
-        if score < best_score:
-            best_score = score
-            best_state = s
-    return best_state
+        if s.fog_node.node_id == best_node.node_id:
+            return s
+    return None
 
 
 def simulate_failure_detection(

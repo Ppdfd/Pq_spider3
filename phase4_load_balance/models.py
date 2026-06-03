@@ -48,6 +48,8 @@ class FogNode:
     tee_available_ms: float = 0.0
     ree_available_ms: float = 0.0
     assigned_count: int = 0
+    policy_cached: bool = False
+    kyber_cached: bool = False
 
     @property
     def capability(self) -> float:
@@ -74,7 +76,23 @@ class Enclave:
 
 def clone_nodes(nodes: List[FogNode]) -> List[FogNode]:
     """Deep-copy fog node list so each algorithm starts from identical state."""
-    return [FogNode(n.node_id, n.tee_rate, n.ree_rate, n.network_ms, n.epc_total_mb, n.trust, n.energy_factor) for n in nodes]
+    return [
+        FogNode(
+            node_id=n.node_id,
+            tee_rate=n.tee_rate,
+            ree_rate=n.ree_rate,
+            network_ms=n.network_ms,
+            epc_total_mb=n.epc_total_mb,
+            trust=n.trust,
+            energy_factor=n.energy_factor,
+            tee_available_ms=n.tee_available_ms,
+            ree_available_ms=n.ree_available_ms,
+            assigned_count=n.assigned_count,
+            policy_cached=n.policy_cached,
+            kyber_cached=n.kyber_cached,
+        )
+        for n in nodes
+    ]
 
 
 def clone_enclaves(enclaves: List[Enclave]) -> List[Enclave]:

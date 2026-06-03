@@ -13,13 +13,14 @@ description: >-
    - Is the telemetry delay identical across all methods?
 3. **Verify Failure-Rate Responsiveness**: When checking fault tolerance graphs (e.g. Graph 10), ensure that metrics like detection time, false positive rate, and control overhead correctly scale with the failure rate. Flat lines are usually indicative of synthetic bias.
 4. **Verify whether it is correctly derive from papers**
-checking if the graphs or simulation code are correctly derived from the papers.
-5. **Report Findings**: If bias is found, write an honest audit report using the `analysis_results.md` artifact, clearly separating what is fair and what is flawed.
+checking if the graphs or simulation code are correctly derived from the papers. to verify running only that graph eg.(asking to check graph 7 running only graph 7)
+5. **Report Findings**: If bias or uncorrectness is found, write an honest audit report using the `analysis_results.md` in the graph/ appending data in each loop, clearly separating what is fair and what is flawed.
 write it in structure
 -overview
+-report what is left that is not correct or need to improve
 -report what is the difference from papers
--report what is not correctly derive from papers
--suggestion to fix
+-what you did to fix
+6. **Loop start from step1**: If there is still an improvement that could be made or the result is satisfying ieeexplore journal experiment then break the loop, else repeat from step 1.
 
 ## Constraints
 - **Never** hide or downplay bias in the codebase. If Spider-FT has an unfair advantage, explicitly call it out.

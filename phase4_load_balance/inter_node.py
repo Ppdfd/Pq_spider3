@@ -64,7 +64,7 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
     if algorithm == "Ref[22]":
         scores = [
             # OLB: minimum-latency selection — network + processing estimate
-            n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - arrival + telemetry_delay) / max(0.1, n.tee_rate + n.ree_rate) + rng.normal(0.0, 1.5)
+            n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - arrival + telemetry_delay) / max(0.1, n.tee_rate + n.ree_rate) + rng.normal(0.0, config.SCHEDULING_NOISE_SIGMA)
             for n in nodes
         ]
 
@@ -79,11 +79,11 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
         scores = []
         for i, n in enumerate(nodes):
             if i == local_idx:
-                scores.append(t_local + rng.normal(0.0, 1.5))
+                scores.append(t_local + rng.normal(0.0, config.SCHEDULING_NOISE_SIGMA))
             else:
                 # t_offloading = 2 * network (round-trip) + remote processing
                 t_off = 2.0 * n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - arrival + telemetry_delay)
-                scores.append(t_off + rng.normal(0.0, 1.5))
+                scores.append(t_off + rng.normal(0.0, config.SCHEDULING_NOISE_SIGMA))
 
     elif algorithm == "Ref[39]":
         # DIST (Paper [39]): Reward-based selection considering latency,
@@ -98,7 +98,7 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
             reliability_penalty = 3.0 * (1.0 - n.trust)
             scores.append(bottleneck + proc_est + 0.65 * n.network_ms
                           + energy_cost + reliability_penalty
-                          + rng.normal(0.0, 1.5))
+                          + rng.normal(0.0, config.SCHEDULING_NOISE_SIGMA))
 
     elif algorithm == "Spider (Ours)":
         scores = []
@@ -128,8 +128,8 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
             delta_k = max(0.0, 1.0 - max(0.0, task.deadline_ms - task.arrival_ms) / d_max)
 
             # Eq 39: R_reuse — computation reuse bonus
-            has_policy = getattr(n, 'policy_cached', False) if hasattr(n, 'policy_cached') else (n.node_id < 3)
-            has_kyber = getattr(n, 'kyber_cached', False) if hasattr(n, 'kyber_cached') else (n.node_id < 3)
+            has_policy = getattr(n, 'policy_cached', False)
+            has_kyber = getattr(n, 'kyber_cached', False)
             R_reuse = config.THETA1_POLICY * float(has_policy) + config.THETA2_KYBER * float(has_kyber)
 
             # Eq 40: SpiderScore = w1*T_wait + w2*L_j + w3*P_epc + w4*P_cap
@@ -141,7 +141,7 @@ def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: n
                      - config.W6_URGENCY * eta_k * n.trust
                      - config.W7_DEADLINE * delta_k * n.tee_rate
                      - config.W8_REUSE * R_reuse
-                     + rng.normal(0.0, 0.5))
+                     + rng.normal(0.0, config.SCHEDULING_NOISE_SIGMA))
             scores.append(score)
     else:
         raise ValueError(algorithm)

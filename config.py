@@ -205,4 +205,11 @@ G8_N_TASKS = 200                     # Number of tasks to simulate per scenario
 G8_CHECKPOINT_PROGRESS = 0.60        # Average checkpoint covers 60% of work
 G8_SPIDER_SUBBATCH_PROGRESS = 0.75   # Average sub-batch completion at failure time
 
+# Telemetry/Simulation Noise Calibration (for fairness audits)
+SCHEDULING_NOISE_SIGMA = 1.0         # Std dev of Level 1 scheduling decision noise (B1)
+HEARTBEAT_JITTER_SIGMA = 2.0         # Std dev of heartbeat transmission delay (B2)
+HEARTBEAT_CONGESTION_PROB = 0.05     # Congestion spike probability (B3)
+HEARTBEAT_CONGESTION_MIN_MS = 30.0   # Min congestion delay
+HEARTBEAT_CONGESTION_MAX_MS = 60.0   # Max congestion delay
+
 

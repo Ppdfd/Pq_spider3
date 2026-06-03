@@ -108,262 +108,146 @@ def _run_heartbeat_simulation(
 ) -> Tuple[float, List[int], List[int]]:
     """
     Simulate heartbeat exchange and failure detection over time.
-
-    For Spider-FT:
-      - Eq 117-119: partition_into_groups()
-      - Eq 120: generate_heartbeat() — each alive node sends authenticated heartbeats
-      - Eq 121-122: check_heartbeat_timeout() — elapsed interval check
-      - Eq 123: detect_failures() → quorum_failure_detection() — quorum confirm
-
-    For baselines (centralized):
-      - All nodes report to central monitor (extra network hop)
-      - Simple timeout check (Eq 122 only, NO quorum Eq 123)
-      - Higher network jitter → more false positives
-
-    Returns:
-      (detection_time_ms, detected_node_ids, false_positive_node_ids)
+    Preserves temporal causality and filters out false positives using group quorums.
     """
+    import math
     tau_h = config.HEARTBEAT_TIMEOUT_MS
     heartbeat_interval = 10.0  # ms between heartbeat rounds
-    max_rounds = 30
-
-    detected_ids: List[int] = []
-    false_positive_ids: List[int] = []
-    detection_time = max_rounds * heartbeat_interval  # default: no detection
+    max_rounds = 40
 
     if strategy == "Spider-FT (Ours)":
-        # ── Eq 117-119: Group partitioning ──
         groups = partition_into_groups(states)
+        node_to_group = {}
+        for g in groups:
+            for m in g.members:
+                node_to_group[m.node_id] = g
 
-        for round_num in range(1, max_rounds + 1):
-            current_ms = round_num * heartbeat_interval
+        monitor_last_hb = {
+            j.node_id: {i.node_id: 0.0 for i in states}
+            for j in states
+        }
 
-            # ── Eq 120: Authenticated heartbeat exchange ──
-            # Alive nodes send heartbeats to group peers.
-            # Failed nodes just stop sending — the monitor does NOT
-            # know they are dead yet (that's what detection discovers).
+        # Track heartbeat events chronologically: (arrival_time, sender_id, receiver_id, send_time)
+        events = []
+        for r in range(1, max_rounds + 1):
+            send_time = r * heartbeat_interval
             for s in states:
                 if s.node_id in failed_set:
-                    # Failed: heartbeat stays stale (never updated)
-                    continue
-                # Generate authenticated heartbeat (Eq 120)
-                hb = generate_heartbeat(s, current_ms)
-                # Intra-group delivery: low jitter (peers are colocated)
-                delivery_jitter = abs(rng.normal(0.0, 1.5))
-                s.last_heartbeat_ms = current_ms - delivery_jitter
-                s.epoch += 1
+                    continue  # dead nodes don't send heartbeats
 
-            # ── Eq 121-123: Group-based detection with quorum ──
-            newly_detected = detect_failures(groups, current_ms, tau_h)
-            if newly_detected:
-                detection_time = current_ms
-                for nid in newly_detected:
-                    if nid in failed_set:
-                        detected_ids.append(nid)
-                    else:
-                        false_positive_ids.append(nid)
-                break  # First detection triggers recovery
+                g = node_to_group[s.node_id]
+                for peer in g.members:
+                    if peer.node_id == s.node_id:
+                        continue
+                    jitter = abs(rng.normal(0.0, config.HEARTBEAT_JITTER_SIGMA))
+                    if rng.random() < config.HEARTBEAT_CONGESTION_PROB:
+                        jitter += rng.uniform(config.HEARTBEAT_CONGESTION_MIN_MS, config.HEARTBEAT_CONGESTION_MAX_MS)
+                    arrival = send_time + jitter
+                    events.append((arrival, s.node_id, peer.node_id, send_time))
 
-    else:
-        # ── Baselines: Centralized timeout detection (no quorum) ──
-        extra_delay = config.CENTRALIZED_EXTRA_DELAY_MS
+        events.sort(key=lambda x: x[0])
 
-        for round_num in range(1, max_rounds + 1):
-            current_ms = round_num * heartbeat_interval
+        declared_failed_ids = []
+        false_positive_ids = []
+        detection_time = max_rounds * heartbeat_interval
+        event_idx = 0
 
-            for s in states:
-                if s.node_id in failed_set:
-                    # Failed: heartbeat stays stale
-                    continue
-                # Centralized: higher jitter (extra hop to central monitor)
-                base_jitter = abs(rng.normal(0.0, 3.5)) + extra_delay
-                # 5% chance of network congestion spike
-                if rng.random() < 0.05:
-                    base_jitter += rng.uniform(30.0, 60.0)
-                s.last_heartbeat_ms = current_ms - base_jitter
+        for r in range(1, max_rounds + 1):
+            current_ms = r * heartbeat_interval
+            # Process all heartbeats received up to current_ms
+            while event_idx < len(events) and events[event_idx][0] <= current_ms:
+                arrival, sender, receiver, send_time = events[event_idx]
+                monitor_last_hb[receiver][sender] = max(monitor_last_hb[receiver][sender], send_time)
+                event_idx += 1
 
-            # Central monitor checks EACH node individually (Eq 122 only)
-            # NO quorum (Eq 123) — single timeout triggers declaration
+            # Quorum failure check
             round_detected = []
             for s in states:
-                if s.declared_failed:
+                if s.node_id in declared_failed_ids:
                     continue
-                # Eq 121-122: timeout check
-                if check_heartbeat_timeout(s, current_ms, tau_h):
-                    s.declared_failed = True
+                g = node_to_group[s.node_id]
+                votes = 0
+                active_peers = 0
+                for peer in g.members:
+                    if peer.node_id == s.node_id:
+                        continue
+                    if peer.node_id in failed_set:
+                        continue  # dead peers don't vote
+                    active_peers += 1
+                    last_hb = monitor_last_hb[peer.node_id][s.node_id]
+                    if current_ms - last_hb > tau_h:
+                        votes += 1
+                if active_peers > 0 and votes >= math.ceil(len(g.members) / 2):
                     round_detected.append(s.node_id)
 
             if round_detected:
-                detection_time = current_ms + extra_delay  # processing delay
+                detection_time = current_ms
+                declared_failed_ids.extend(round_detected)
                 for nid in round_detected:
-                    if nid in failed_set:
-                        detected_ids.append(nid)
-                    else:
+                    if nid not in failed_set:
                         false_positive_ids.append(nid)
                 break
 
-        # Add strategy-specific overhead
+        detected_failures = [nid for nid in declared_failed_ids if nid in failed_set]
+        return detection_time, detected_failures, false_positive_ids
+
+    else:
+        # Centralized baselines
+        extra_delay = config.CENTRALIZED_EXTRA_DELAY_MS
+        monitor_last_hb = {s.node_id: 0.0 for s in states}
+
+        # Track heartbeat arrivals at central monitor M: (arrival_time, sender_id, send_time)
+        events = []
+        for r in range(1, max_rounds + 1):
+            send_time = r * heartbeat_interval
+            for s in states:
+                if s.node_id in failed_set:
+                    continue
+                jitter = abs(rng.normal(0.0, config.HEARTBEAT_JITTER_SIGMA)) + extra_delay
+                if rng.random() < config.HEARTBEAT_CONGESTION_PROB:
+                    jitter += rng.uniform(config.HEARTBEAT_CONGESTION_MIN_MS, config.HEARTBEAT_CONGESTION_MAX_MS)
+                arrival = send_time + jitter
+                events.append((arrival, s.node_id, send_time))
+
+        events.sort(key=lambda x: x[0])
+
+        declared_failed_ids = []
+        false_positive_ids = []
+        detection_time = max_rounds * heartbeat_interval
+        event_idx = 0
+
+        for r in range(1, max_rounds + 1):
+            current_ms = r * heartbeat_interval
+            # Process all heartbeats received up to current_ms
+            while event_idx < len(events) and events[event_idx][0] <= current_ms:
+                arrival, sender, send_time = events[event_idx]
+                monitor_last_hb[sender] = max(monitor_last_hb[sender], send_time)
+                event_idx += 1
+
+            round_detected = []
+            for s in states:
+                if s.node_id in declared_failed_ids:
+                    continue
+                last_hb = monitor_last_hb[s.node_id]
+                if current_ms - last_hb > tau_h:
+                    round_detected.append(s.node_id)
+
+            if round_detected:
+                detection_time = current_ms + extra_delay
+                declared_failed_ids.extend(round_detected)
+                for nid in round_detected:
+                    if nid not in failed_set:
+                        false_positive_ids.append(nid)
+                break
+
+        detected_failures = [nid for nid in declared_failed_ids if nid in failed_set]
         if strategy == "Full Checkpoint":
             detection_time += config.CHECKPOINT_SYNC_OVERHEAD_MS
-
-    return detection_time, detected_ids, false_positive_ids
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# Strategy-specific recovery
-# ═══════════════════════════════════════════════════════════════════════
-
-def _simulate_no_ft(tasks, assignments, failed_set):
-    """No Fault-Tolerance: orphaned workloads are dropped."""
-    n_orphaned = sum(1 for a in assignments if a in failed_set)
-    return {
-        "detection_time_ms": float("inf"),
-        "recovery_latency_ms": 0.0,
-        "task_completion_ratio": (len(tasks) - n_orphaned) / len(tasks),
-        "control_messages": 0,
-        "false_positive_rate": 0.0,
-    }
-
-
-def _recover_tasks(
-    strategy: str,
-    tasks: List[WorkloadTask],
-    assignments: List[int],
-    progress: List[float],
-    failed_set: Set[int],
-    states: List[FogNodeState],
-    detection_time: float,
-    false_positive_ids: List[int],
-    rng: np.random.Generator,
-) -> Tuple[int, float, int]:
-    """
-    Run recovery for orphaned tasks. Returns (completed, avg_latency, control_msgs).
-
-    Spider-FT uses:
-      - Eq 124: DelegationCapsule.create() — secure state transfer
-      - Eq 125: select_recovery_node() — SpiderScore-based selection
-      - Sub-batch restart (partial execution)
-
-    Baselines use:
-      - No delegation capsule → full batch restart
-      - Simple node selection (random / round-robin / least-queue)
-    """
-    orphaned = [(i, tasks[i]) for i, a in enumerate(assignments) if a in failed_set]
-    if not orphaned:
-        return 0, 0.0, 0
-
-    alive_states = [s for s in states if s.is_alive and not s.declared_failed]
-    recovery_lats: List[float] = []
-    completed = 0
-    control_msgs = 0
-
-    if strategy == "Spider-FT (Ours)":
-        # ── Eq 124 + 125: Delegation capsule recovery ──
-        for task_idx, task in orphaned:
-            # Eq 124: Create authenticated delegation capsule
-            # Preserves partial progress + cryptographic state
-            capsule = DelegationCapsule.create(
-                workload_id=f"batch_{task_idx}",
-                sub_batch_id=f"sub_{task_idx}_0",
-                progress=progress[task_idx],
-                metadata={
-                    "records": task.records,
-                    "attrs": task.attrs,
-                    "policy_depth": task.policy_depth,
-                },
-                partial_ct=b"\x00" * 32,  # simulated partial ciphertext
-                timestamp_ms=detection_time,
-                epoch=1,
-                signing_key=b"spider_delegation_key",
-            )
-            control_msgs += 1  # capsule transfer message
-
-            # Eq 125: F_recover = argmin SpiderScore(F_j, B_k)
-            recovery_state = select_recovery_node(states, rng)
-            if recovery_state is None:
-                continue
-
-            # Sub-batch recovery: resume from capsule.progress
-            restart_fraction = max(0.05, 1.0 - capsule.progress)
-            lat = _execute_recovery_task(
-                recovery_state.fog_node, task,
-                restart_fraction=restart_fraction,
-                detection_delay_ms=detection_time,
-                rng=rng,
-            )
-            recovery_lats.append(lat)
-            if lat <= task.deadline_ms:
-                completed += 1
-
-    elif strategy == "Centralized HB":
-        # Random alive node, full batch restart, no delegation
-        for _, task in orphaned:
-            if not alive_states:
-                break
-            node = alive_states[int(rng.integers(0, len(alive_states)))].fog_node
-            lat = _execute_recovery_task(
-                node, task, restart_fraction=1.0,
-                detection_delay_ms=detection_time, rng=rng,
-            )
-            recovery_lats.append(lat)
-            if lat <= task.deadline_ms:
-                completed += 1
-        control_msgs = len(states)  # O(N) per heartbeat round
-
-    elif strategy == "Full Checkpoint":
-        # Random alive node, resume from checkpoint (partial restart)
-        for _, task in orphaned:
-            if not alive_states:
-                break
-            node = alive_states[int(rng.integers(0, len(alive_states)))].fog_node
-            restart_frac = max(0.1, 1.0 - config.G8_CHECKPOINT_PROGRESS
-                               + rng.uniform(-0.1, 0.1))
-            lat = _execute_recovery_task(
-                node, task, restart_fraction=restart_frac,
-                detection_delay_ms=detection_time, rng=rng,
-            )
-            recovery_lats.append(lat)
-            if lat <= task.deadline_ms:
-                completed += 1
-        control_msgs = len(states) * 3  # O(N × state_size) per checkpoint
-
-    elif strategy == "Round-Robin":
-        # Cyclic node selection, full restart
-        for idx, (_, task) in enumerate(orphaned):
-            if not alive_states:
-                break
-            node = alive_states[idx % len(alive_states)].fog_node
-            lat = _execute_recovery_task(
-                node, task, restart_fraction=1.0,
-                detection_delay_ms=detection_time, rng=rng,
-            )
-            recovery_lats.append(lat)
-            if lat <= task.deadline_ms:
-                completed += 1
-        control_msgs = len(states)
-
-    elif strategy == "Least-Queue":
-        # Shortest queue node, full restart
-        for _, task in orphaned:
-            if not alive_states:
-                break
-            best = min(alive_states, key=lambda s: s.fog_node.assigned_count)
-            node = best.fog_node
-            lat = _execute_recovery_task(
-                node, task, restart_fraction=1.0,
-                detection_delay_ms=detection_time, rng=rng,
-            )
-            recovery_lats.append(lat)
-            if lat <= task.deadline_ms:
-                completed += 1
-        control_msgs = len(states)
-
-    avg_lat = float(np.mean(recovery_lats)) if recovery_lats else 0.0
-    return completed, avg_lat, control_msgs
+        return detection_time, detected_failures, false_positive_ids
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Scenario runner
+# Strategy-specific recovery and chronological simulation
 # ═══════════════════════════════════════════════════════════════════════
 
 STRATEGY_NAMES = [
@@ -378,22 +262,15 @@ STRATEGY_NAMES = [
 
 def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
     """
-    Run one complete failure scenario for all strategies.
-
-    All strategies share:
-      - Same task stream (generate_tasks with same seed)
-      - Same node population (generate_nodes with same seed)
-      - Same failure injection (same node indices)
-      - Same execution model (_execute_recovery_task)
-      - Same pre-failure task progress
-
-    Detection and recovery differ per strategy.
+    Run one complete failure scenario for all strategies using chronological discrete-event simulation.
     """
     n_tasks = config.G8_N_TASKS
 
     # Shared scenario inputs
     task_rng = np.random.default_rng(seed)
-    tasks = generate_tasks(n_tasks, task_rng, offered_load=1.0)
+    # Scale offered load dynamically with the number of nodes to maintain uniform utilization
+    offered_load = 1.0 * (n_nodes / 5.0)
+    tasks = generate_tasks(n_tasks, task_rng, offered_load=offered_load)
 
     assign_rng = np.random.default_rng(seed + 777)
     assignments = _assign_tasks_to_nodes(tasks, n_nodes, assign_rng)
@@ -409,10 +286,6 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
     results: Dict = {}
 
     for strategy in STRATEGY_NAMES:
-        if strategy == "No FT":
-            results[strategy] = _simulate_no_ft(tasks, assignments, failed_set)
-            continue
-
         # Fresh nodes and states per strategy (identical initial conditions)
         fog_nodes = generate_nodes(n_nodes, heterogeneous=True,
                                    rng=np.random.default_rng(seed))
@@ -423,31 +296,129 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
         strat_rng = np.random.default_rng(seed + hash(strategy) % 10000)
 
         # ── Phase 1: Heartbeat simulation + detection ──
-        detection_time, detected_ids, fp_ids = _run_heartbeat_simulation(
-            states, failed_set, strategy, strat_rng,
-        )
+        if strategy == "No FT":
+            detection_time = float('inf')
+            fp_ids = []
+        else:
+            detection_time, detected_ids, fp_ids = _run_heartbeat_simulation(
+                states, failed_set, strategy, strat_rng,
+            )
 
-        # After detection: mark detected nodes as non-alive for recovery
+        # After detection: mark failed nodes as non-alive
         for s in states:
             if s.node_id in failed_set:
                 s.is_alive = False
 
-        # ── Phase 2: Recovery ──
-        completed, avg_recovery_lat, control_msgs = _recover_tasks(
-            strategy, tasks, assignments, progress, failed_set,
-            states, detection_time, fp_ids, strat_rng,
-        )
+        alive_states = [s for s in states if s.is_alive and not s.declared_failed]
 
-        # ── Metrics ──
-        n_alive_tasks = sum(1 for a in assignments if a not in failed_set)
-        total_completed = n_alive_tasks + completed
+        # Construct task scheduling events chronologically
+        events = []
+        for i, task in enumerate(tasks):
+            assigned_node = assignments[i]
+            if assigned_node in failed_set:
+                if task.arrival_ms < detection_time:
+                    # Orphaned: recovered at detection time
+                    events.append((detection_time, 'recovery', i, assigned_node))
+                else:
+                    # Arrives after detection: scheduled normally on healthy node
+                    events.append((task.arrival_ms, 'normal', i, assigned_node))
+            else:
+                # Normal task on healthy node: scheduled at arrival
+                events.append((task.arrival_ms, 'normal', i, assigned_node))
+
+        # Process events chronologically
+        events.sort(key=lambda x: x[0])
+
+        completed = 0
+        recovery_lats = []
+        control_msgs = 0
+
+        # Import execution functions locally
+        from phase4_load_balance.inter_node import execute_task, choose_node
+        import copy
+
+        for event_time, etype, idx, assigned_node in events:
+            task = copy.copy(tasks[idx])
+
+            if etype == 'normal':
+                if assigned_node not in failed_set:
+                    node = states[assigned_node].fog_node
+                else:
+                    if not alive_states:
+                        continue
+                    # Redirect to healthy node using the strategy's scheduler
+                    if strategy == "Spider-FT (Ours)":
+                        node = choose_node([s.fog_node for s in alive_states], task, "Spider (Ours)", strat_rng)
+                    elif strategy == "Least-Queue":
+                        best = min(alive_states, key=lambda s: s.fog_node.assigned_count)
+                        node = best.fog_node
+                    elif strategy == "Round-Robin":
+                        node = alive_states[idx % len(alive_states)].fog_node
+                    else:
+                        if strategy == "No FT":
+                            continue  # Dropped
+                        node = alive_states[int(strat_rng.integers(0, len(alive_states)))].fog_node
+
+                total_lat = execute_task(node, task, strat_rng)
+                if total_lat <= task.deadline_ms:
+                    completed += 1
+
+            elif etype == 'recovery':
+                if strategy == "No FT":
+                    continue
+                if not alive_states:
+                    continue
+
+                if strategy == "Spider-FT (Ours)":
+                    restart_fraction = max(0.05, 1.0 - progress[idx])
+                    control_msgs += 1
+                    recovery_state = select_recovery_node(
+                        states, strat_rng, task,
+                        decision_time=event_time,
+                        restart_fraction=restart_fraction,
+                    )
+                    if recovery_state is None:
+                        continue
+                    node = recovery_state.fog_node
+                elif strategy == "Full Checkpoint":
+                    restart_fraction = max(0.1, 1.0 - config.G8_CHECKPOINT_PROGRESS + strat_rng.uniform(-0.1, 0.1))
+                    node = alive_states[int(strat_rng.integers(0, len(alive_states)))].fog_node
+                    control_msgs += 3
+                elif strategy == "Centralized HB":
+                    restart_fraction = 1.0
+                    node = alive_states[int(strat_rng.integers(0, len(alive_states)))].fog_node
+                    control_msgs = len(states)
+                elif strategy == "Round-Robin":
+                    restart_fraction = 1.0
+                    node = alive_states[idx % len(alive_states)].fog_node
+                    control_msgs = len(states)
+                elif strategy == "Least-Queue":
+                    restart_fraction = 1.0
+                    best = min(alive_states, key=lambda s: s.fog_node.assigned_count)
+                    node = best.fog_node
+                    control_msgs = len(states)
+                else:
+                    continue
+
+                lat = _execute_recovery_task(
+                    node, task,
+                    restart_fraction=restart_fraction,
+                    detection_delay_ms=event_time,
+                    rng=strat_rng,
+                )
+                recovery_lats.append(lat)
+                total_lat = lat + (event_time - task.arrival_ms)
+                if total_lat <= task.deadline_ms:
+                    completed += 1
+
+        avg_lat = float(np.mean(recovery_lats)) if recovery_lats else 0.0
         n_healthy = len(states) - len(failed_set)
         fp_rate = len(fp_ids) / max(1, n_healthy)
 
         results[strategy] = {
             "detection_time_ms": detection_time,
-            "recovery_latency_ms": avg_recovery_lat,
-            "task_completion_ratio": total_completed / len(tasks),
+            "recovery_latency_ms": avg_lat,
+            "task_completion_ratio": completed / len(tasks),
             "control_messages": control_msgs,
             "false_positive_rate": fp_rate,
         }
