@@ -96,6 +96,7 @@ PLOT = PlotConfig()
 MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
 
 SCHEME_STYLES = {
+    # ── Graphs 1-7 (load balancing / crypto) ──
     "Spider (Ours)": {"color": "#1A73E8", "marker": "o"},
     "Spider Reuse-Aware Cache (Ours)": {"color": "#1A73E8", "marker": "o"},
     "Spider Secure Task Delegation (Ours)": {"color": "#1A73E8", "marker": "o"},
@@ -107,8 +108,13 @@ SCHEME_STYLES = {
     "Random Cache Placement": {"color": "#34A853", "marker": "s"},
     "No Delegation": {"color": "#E8710A", "marker": "x"},
     "Simple Retry / Reassignment": {"color": "#34A853", "marker": "v"},
-    "Round-Robin": {"color": "#E8710A", "marker": "s"},
-    "Least-Queue": {"color": "#34A853", "marker": "^"},
+    # ── Graphs 8-9 (fault tolerance) ──
+    "Spider-FT (Ours)": {"color": "#1A73E8", "marker": "o"},   # Blue circle (consistent with Spider)
+    "No FT":            {"color": "#7F7F7F", "marker": "x"},   # Grey X
+    "Centralized HB":   {"color": "#E8710A", "marker": "s"},   # Orange square
+    "Full Checkpoint":  {"color": "#9B59B6", "marker": "^"},   # Purple triangle
+    "Round-Robin":      {"color": "#34A853", "marker": "D"},   # Green diamond
+    "Least-Queue":      {"color": "#EA4335", "marker": "v"},   # Red down-triangle
 }
 
 
@@ -209,6 +215,7 @@ def plot_lines(
     ylabel: str,
     filename: str,
     ylim_bottom: float | None = 0.0,
+    ylim_top: float | None = None,
 ) -> None:
     """Plot lines with optional standard-deviation bands and save PNG/PDF."""
 
@@ -224,7 +231,9 @@ def plot_lines(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if ylim_bottom is not None:
-        ax.set_ylim(bottom=ylim_bottom)
+        ax.set_ylim(bottom=ylim_bottom, top=ylim_top)
+    elif ylim_top is not None:
+        ax.set_ylim(top=ylim_top)
     ax.legend(frameon=True, loc="best")
     fig.tight_layout()
     fig.savefig(OUT_DIR / f"{filename}.png")

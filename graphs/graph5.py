@@ -12,7 +12,7 @@ def graph_load_balancing(
     rng: np.random.Generator,
     graph_no: int,
     heterogeneous: bool,
-    reps: int = 2,
+    reps: int = 5,
 ) -> Dict[str, np.ndarray]:
     """Common driver for Graph 5 and Graph 6."""
 

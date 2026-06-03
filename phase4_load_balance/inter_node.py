@@ -185,7 +185,13 @@ def simulate_load_balancing(
     alg_offset = {"Ref[22]": 11, "Ref[37]": 23, "Ref[39]": 37, "Spider (Ours)": 53}[algorithm]
     rng = np.random.default_rng(seed + alg_offset)
 
-    offered_load = 1.22 if heterogeneous else 1.12
+    # Fixed offered load: the TOTAL workload is constant across the x-axis.
+    # As we add more nodes, each node handles a smaller share → latency decreases.
+    # The load is calibrated so that ~6 nodes operate near 75% utilization,
+    # creating a realistic transition from congested (2-4 nodes) to comfortable
+    # (10-12 nodes) with room for algorithm differentiation.
+    offered_load = 0.65 if heterogeneous else 0.55
+
     tasks = generate_tasks(n_tasks, base_rng, offered_load=offered_load)
     nodes = clone_nodes(generate_nodes(node_count, heterogeneous, base_rng))
 

@@ -172,16 +172,16 @@ G4_ATTR_RANGE = list(range(5, 55, 5))
 G4_REPS = 3
 
 # Graph 5: Load Balancing Latency (Sweeps Number of Fog Nodes)
-G5_NUM_TASKS = 500
+G5_NUM_TASKS = 2000
 G5_NUM_FOGS = [2, 4, 6, 8, 10, 12]
 
 # Graph 6: Heterogeneous Fog Nodes Load Balancing
-G6_NUM_TASKS = 500
+G6_NUM_TASKS = 2000
 G6_NUM_FOGS = [2, 4, 6, 8, 10, 12]
 
 
 # Graph 7: Intra-Node Scheduling & Queue State Diagnosis
-G7_NUM_TASKS = 500
+G7_NUM_TASKS = 2000
 G7_NUM_TEES = 4
 G7_SPREAD_FACTORS = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
 

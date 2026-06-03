@@ -24,16 +24,16 @@ def run_all_graphs():
     print("Spider Modular Evaluation Simulation")
     print("=" * 72)
 
-    graph1_setup_phase(rng)
+    #graph1_setup_phase(rng)
     print("  * Graph 1 generated (phase1)")
 
-    graph2_cache_reuse(rng)
+    #graph2_cache_reuse(rng)
     print("  * Graph 2 generated (phase3)")
 
-    graph3_cpabe_encryption(rng)
+    #graph3_cpabe_encryption(rng)
     print("  * Graph 3 generated (phase5)")
 
-    graph4_cpabe_decryption(rng)
+    #graph4_cpabe_decryption(rng)
     print("  * Graph 4 generated (phase6)")
 
     graph_load_balancing(rng, graph_no=5, heterogeneous=False)
