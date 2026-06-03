@@ -115,7 +115,7 @@ def _run_heartbeat_simulation(
     heartbeat_interval = 10.0  # ms between heartbeat rounds
     max_rounds = 40
 
-    if strategy == "Spider-FT (Ours)":
+    if strategy == "Spider (Ours)":
         groups = partition_into_groups(states)
         node_to_group = {}
         for g in groups:
@@ -260,7 +260,7 @@ STRATEGY_NAMES = [
     "Full Checkpoint",
     "Round-Robin",
     "Least-Queue",
-    "Spider-FT (Ours)",
+    "Spider (Ours)",
 ]
 
 
@@ -355,7 +355,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                     if not alive_states:
                         continue
                     # Redirect to healthy node using the strategy's scheduler
-                    if strategy == "Spider-FT (Ours)":
+                    if strategy == "Spider (Ours)":
                         node = choose_node([s.fog_node for s in alive_states], task, "Spider (Ours)", strat_rng)
                     elif strategy == "Least-Queue":
                         best = min(alive_states, key=lambda s: s.fog_node.assigned_count)
@@ -383,7 +383,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                 if not alive_states:
                     continue
 
-                if strategy == "Spider-FT (Ours)":
+                if strategy == "Spider (Ours)":
                     restart_fraction = max(0.05, 1.0 - progress[idx])
                     control_msgs += 1
                     recovery_state = select_recovery_node(

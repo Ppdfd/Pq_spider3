@@ -211,7 +211,7 @@ CHECKPOINT_SYNC_OVERHEAD_MS = 15.0
 CENTRALIZED_EXTRA_DELAY_MS = 8.0
 
 # Recovery simulation parameters (Graph 8-9)
-G8_N_TASKS = 200                     # Number of tasks to simulate per scenario
+G8_N_TASKS = 1000                    # Number of tasks to simulate per scenario
 # Average checkpoint progress: checkpoints taken every CHECKPOINT_INTERVAL_MS
 # (100ms). Under offered_load ≈ 1.0, average task service time is ~56ms
 # (Phase 5 measured). Failure occurs uniformly within the checkpoint
