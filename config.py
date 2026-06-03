@@ -87,7 +87,8 @@ BETA1_SIZE     = 1.0     # Batch size factor
 BETA2_ATTR     = 0.5     # Attribute count factor
 BETA3_DEPTH    = 0.3     # Policy depth factor
 # EPC thresholds
-EPC_PRESSURE_TAU = 0.8   # tau threshold for EPC pressure (Eq 33)
+EPC_PRESSURE_TAU = 0.8   # tau threshold for EPC pressure (Eq 29)
+EPC_KAPPA = 10.0         # κ: sigmoid overload sensitivity (Eq 29)
 # EPC admission control (Eq 49): M_free >= ALPHA_EPC_SAFETY * M_req
 ALPHA_EPC_SAFETY = 1.15  # safety margin for enclave EPC admission
 
@@ -198,4 +199,10 @@ G9_REPS = 5
 CHECKPOINT_INTERVAL_MS = 100.0
 CHECKPOINT_SYNC_OVERHEAD_MS = 15.0
 CENTRALIZED_EXTRA_DELAY_MS = 8.0
+
+# Recovery simulation parameters (Graph 8-9)
+G8_N_TASKS = 200                     # Number of tasks to simulate per scenario
+G8_CHECKPOINT_PROGRESS = 0.60        # Average checkpoint covers 60% of work
+G8_SPIDER_SUBBATCH_PROGRESS = 0.75   # Average sub-batch completion at failure time
+
 

@@ -238,17 +238,17 @@ def _recovery_spider_score(node: FogNode) -> float:
 
 
 def epc_pressure_penalty_ratio(node: FogNode) -> float:
-    """EPC pressure estimate for recovery scoring (no task context).
+    """Eq 29: Sigmoid EPC pressure estimate for recovery scoring.
 
-    Uses the same quadratic-threshold model as
-    :func:`inter_node.epc_pressure_penalty` but operates on the node's
-    current EPC utilization ratio instead of a per-task request.
+    Uses the same sigmoid model as inter_node.epc_pressure_penalty
+    but operates on node-level utilization ratio instead of per-task.
     """
-    # assigned_count / 10 is a rough proxy for EPC fill ratio (0..1)
-    ratio = min(1.0, node.assigned_count / max(1, 10))
-    if ratio <= 0.72:
-        return 0.0
-    return 75.0 * ((ratio - 0.72) ** 2)
+    import math
+    # assigned_count / 10 is a rough proxy for EPC utilization
+    utilization = min(1.0, node.assigned_count / max(1, 10))
+    epsilon_j = 1.0 - utilization  # availability ratio
+    rho_epc = 1.0 / (1.0 + math.exp(-config.EPC_KAPPA * (epsilon_j - config.EPC_PRESSURE_TAU)))
+    return rho_epc * utilization
 
 
 def select_recovery_node(

@@ -82,6 +82,62 @@ MODE_SEED_OFFSET = {
 # the code must run logic to get the runtime."
 _CPABE_COST_TABLE: dict | None = None
 
+# ── Measured cache speedup factor ──
+_CACHE_FACTOR: float | None = None
+
+
+def _measure_cache_factor() -> float:
+    """Measure actual speedup from cached LSSS policy vs cold-start encrypt.
+
+    Returns the ratio warm_time / cold_time (< 1.0 means cache is faster).
+    """
+    import os
+    import time as _time
+    from crypto_primitives.cp_abe import LatticeCPABE
+
+    global _CACHE_FACTOR
+    if _CACHE_FACTOR is not None:
+        return _CACHE_FACTOR
+
+    n_attr = 20
+    universe = [f"Attr{i}" for i in range(n_attr)]
+    policy = {"type": "AND", "attributes": universe}
+    aa = LatticeCPABE(n=256, q=3329)
+    aa.setup()
+    for a in universe:
+        aa.hash_attribute(a)
+    aa.keygen({}, universe)
+
+    n_warmup, n_measure = 2, 5
+
+    # Cold: clear all caches each time (Ref[4] stateless model)
+    for _ in range(n_warmup):
+        aa._A_float = None; aa._sec.clear(); aa._pub.clear()
+        aa.encrypt(os.urandom(32), policy)
+    cold_times = []
+    for _ in range(n_measure):
+        aa._A_float = None; aa._sec.clear(); aa._pub.clear()
+        t0 = _time.perf_counter()
+        aa.encrypt(os.urandom(32), policy)
+        cold_times.append(_time.perf_counter() - t0)
+
+    # Warm: caches populated (Spider persistent enclave model)
+    policy_pkg = aa.ree_build_policy(policy)
+    aa._get_A_float()
+    for _ in range(n_warmup):
+        tee_out = aa.tee_partial_encrypt(os.urandom(32), policy_pkg)
+        aa.ree_finalize_ct(policy_pkg, tee_out)
+    warm_times = []
+    for _ in range(n_measure):
+        t0 = _time.perf_counter()
+        tee_out = aa.tee_partial_encrypt(os.urandom(32), policy_pkg)
+        aa.ree_finalize_ct(policy_pkg, tee_out)
+        warm_times.append(_time.perf_counter() - t0)
+
+    _CACHE_FACTOR = float(np.median(warm_times) / max(1e-9, np.median(cold_times)))
+    print(f"  [graph2] Measured cache_factor = {_CACHE_FACTOR:.3f}")
+    return _CACHE_FACTOR
+
 
 def _measure_cpabe_costs() -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -155,21 +211,21 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
             node = min(nodes, key=lambda n: max(0.0, n.available_ms - arrival) + n.network_ms)
             cache_hit = False
         elif mode == "random_cache":
-            scores = [max(0.0, n.available_ms - arrival) + n.network_ms + rng.normal(0.0, 1.8) for n in nodes]
+            scores = [max(0.0, n.available_ms - arrival) + n.network_ms + rng.normal(0.0, 1.0) for n in nodes]
             node = nodes[int(np.argmin(scores))]
             cache_hit = node.has_policy(policy_id)
         else:
             def spider_score(n: CacheNode) -> float:
                 q_delay = max(0.0, n.available_ms - arrival)
                 miss_penalty = 10.5 if not n.has_policy(policy_id) else 0.0
-                return q_delay + n.network_ms + miss_penalty + rng.normal(0.0, 0.7)
+                return q_delay + n.network_ms + miss_penalty + rng.normal(0.0, 1.0)
 
             node = min(nodes, key=spider_score)
             cache_hit = node.has_policy(policy_id)
 
         hits += int(cache_hit)
 
-        cache_factor = 0.68 if cache_hit else 1.00
+        cache_factor = _measure_cache_factor() if cache_hit else 1.00
         service_ms = (cpabe_base * cache_factor / node.speed) * float(rng.lognormal(0.0, 0.06)) + node.tee_overhead_ms
         net_ms = max(0.2, node.network_ms + rng.normal(0.0, 0.9))
 

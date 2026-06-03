@@ -26,12 +26,24 @@ from .generators import generate_tasks, generate_nodes
 
 
 def epc_pressure_penalty(task: WorkloadTask, node: FogNode) -> float:
-    """Soft penalty when expected enclave memory approaches safe EPC capacity."""
+    """Eq 29 + Eq 36: Sigmoid EPC pressure penalty.
 
-    ratio = task.epc_req_mb / node.epc_total_mb
-    if ratio <= 0.72:
-        return 0.0
-    return 75.0 * ((ratio - 0.72) ** 2)
+    ρ_epc(F_j) = 1 / (1 + e^{-κ(ε_j - τ_epc)})     (Eq 29)
+    P_epc(F_j, B_k) = ρ_epc(F_j) · M_req / M_free   (Eq 36)
+
+    where ε_j = M_free / M_total is the EPC availability ratio.
+    """
+    import math
+    # ε_j: availability ratio (higher = more memory available)
+    M_free = max(0.01, node.epc_total_mb - task.epc_req_mb * node.assigned_count)
+    epsilon_j = M_free / max(0.01, node.epc_total_mb)
+
+    # Eq 29: sigmoid EPC pressure (low ε → high pressure)
+    rho_epc = 1.0 / (1.0 + math.exp(-config.EPC_KAPPA * (epsilon_j - config.EPC_PRESSURE_TAU)))
+
+    # Eq 36: scale by task memory demand relative to available
+    return rho_epc * (task.epc_req_mb / max(0.01, M_free))
+
 
 
 def choose_node(nodes: List[FogNode], task: WorkloadTask, algorithm: str, rng: np.random.Generator) -> FogNode:

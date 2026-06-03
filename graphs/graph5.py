@@ -39,7 +39,7 @@ def graph_load_balancing(
                 vals.append(simulate_load_balancing(int(n), alg, heterogeneous, seed=seed, n_tasks=n_tasks))
             rep_values.append(np.array(vals))
         mean, std = summarize_runs(rep_values)
-        mean_series[alg] = noisy_curve(mean, rng, pct=0.010, monotonic="decreasing")
+        mean_series[alg] = mean
         std_series[alg] = std
 
     # AUDIT FIX: Post-hoc override removed.  All algorithms are now
