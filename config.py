@@ -233,5 +233,3 @@ HEARTBEAT_JITTER_SIGMA = 2.0         # Std dev of heartbeat transmission delay (
 HEARTBEAT_CONGESTION_PROB = 0.05     # Congestion spike probability (B3)
 HEARTBEAT_CONGESTION_MIN_MS = 30.0   # Min congestion delay
 HEARTBEAT_CONGESTION_MAX_MS = 60.0   # Max congestion delay
-
-

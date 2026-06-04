@@ -59,7 +59,7 @@ def graph9_task_completion(rng: np.random.Generator, reps: int = None):
         "Failure Rate (%)",
         "Task Completion Ratio (%)",
         "graph9_task_completion",
-        ylim_bottom=80.0,
+        ylim_bottom=65.0,
         ylim_top=100.0,
     )
     return data
