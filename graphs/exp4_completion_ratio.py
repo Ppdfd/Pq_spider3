@@ -15,7 +15,7 @@ import numpy as np
 import config
 from utils.eval_utils import summarize_runs, save_csv, plot_lines, RAW_DIR
 
-from graphs.graph8 import STRATEGY_NAMES, _run_scenario
+from graphs.exp3_recovery_latency import STRATEGY_NAMES, _run_scenario
 
 
 def graph9_task_completion(rng: np.random.Generator, reps: int = None):

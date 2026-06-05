@@ -46,11 +46,7 @@ def select_policy(rng: np.random.Generator) -> int:
     return int(rng.choice(policies, p=weights / weights.sum()))
 
 
-MODE_SEED_OFFSET = {
-    "no_cache": 101,
-    "random_cache": 211,
-    "spider_cache": 307,
-}
+
 
 
 def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float, float]:
@@ -102,21 +98,27 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
     node_caches: List[OrderedDict] = [OrderedDict() for _ in nodes]
 
     arrivals = np.sort(rng.uniform(0, 700.0, task_count))
+    policy_ids = [select_policy(rng) for _ in range(task_count)]
+    
+    import config
+    service_noise = rng.lognormal(0.0, config.G2_SERVICE_NOISE_SIGMA, task_count)
+    net_noise = rng.normal(0.0, config.G2_NET_JITTER_SIGMA_MS, task_count)
+    sched_noise = rng.normal(0.0, 1.0, (task_count, len(nodes)))
 
     latencies: List[float] = []
     hits = 0
 
-    for arrival in arrivals:
-        policy_id = select_policy(rng)
+    for i, arrival in enumerate(arrivals):
+        policy_id = policy_ids[i]
 
         if mode == "no_cache":
             node_idx = int(np.argmin([
-                max(0.0, n.available_ms - arrival) + n.network_ms
-                for n in nodes
+                max(0.0, n.available_ms - arrival) + n.network_ms + sched_noise[i][ni]
+                for ni, n in enumerate(nodes)
             ]))
         elif mode == "random_cache":
-            scores = [max(0.0, n.available_ms - arrival) + n.network_ms + rng.normal(0.0, 1.0)
-                      for n in nodes]
+            scores = [max(0.0, n.available_ms - arrival) + n.network_ms + sched_noise[i][ni]
+                      for ni, n in enumerate(nodes)]
             node_idx = int(np.argmin(scores))
         else:  # spider_cache
             scores = []
@@ -126,7 +128,7 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
                 import config
                 penalty_ms = getattr(config, 'MEASURED_MARSHALING_MS', 5.0)
                 miss_penalty = penalty_ms if policy_id not in node_caches[ni] else 0.0
-                scores.append(q_delay + n.network_ms + miss_penalty + rng.normal(0.0, 1.0))
+                scores.append(q_delay + n.network_ms + miss_penalty + sched_noise[i][ni])
             node_idx = int(np.argmin(scores))
 
         node = nodes[node_idx]
@@ -136,10 +138,14 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
         # Check cache hit/miss
         cache_hit = policy_id in cache
 
+        import config
+        actual_marshaling_penalty = 0.0
+
         t0 = _time.perf_counter()
         if mode == "no_cache" or not cache_hit:
             # COLD: build policy from scratch (timed)
             policy_pkg = aa.ree_build_policy(policy_pool[policy_id])
+            actual_marshaling_penalty = getattr(config, 'MEASURED_MARSHALING_MS', 5.0)
         else:
             # WARM: retrieve from OrderedDict LRU (instant)
             policy_pkg = cache[policy_id]
@@ -147,7 +153,7 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
 
         tee_out = aa.tee_partial_encrypt(FIXED_KEY, policy_pkg)
         aa.ree_finalize_ct(policy_pkg, tee_out)
-        elapsed_ms = (_time.perf_counter() - t0) * 1000.0
+        elapsed_ms = (_time.perf_counter() - t0) * 1000.0 + actual_marshaling_penalty
 
         hits += int(cache_hit)
 
@@ -158,8 +164,8 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
             while len(cache) > node.cache_capacity:
                 cache.popitem(last=False)  # evict LRU entry
 
-        service_ms = (elapsed_ms / node.speed) * float(rng.lognormal(0.0, 0.06)) + node.tee_overhead_ms
-        net_ms = max(0.2, node.network_ms + rng.normal(0.0, 0.9))
+        service_ms = (elapsed_ms / node.speed) * float(service_noise[i]) + node.tee_overhead_ms
+        net_ms = max(0.2, node.network_ms + net_noise[i])
 
         start = max(arrival + net_ms, node.available_ms)
         finish = start + service_ms
@@ -197,7 +203,7 @@ def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
                 avg, hit = simulate_cache_latency(
                     int(task_count),
                     mode,
-                    seed=GLOBAL_SEED + MODE_SEED_OFFSET[mode] + 1000 * rep + int(task_count),
+                    seed=GLOBAL_SEED + 1000 * rep + int(task_count),
                 )
                 vals.append(avg)
                 hit_vals.append(hit)

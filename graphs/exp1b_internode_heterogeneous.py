@@ -16,7 +16,7 @@ FAIRNESS AUDIT NOTE:
 from typing import Dict
 import numpy as np
 
-from graphs.graph5 import graph_load_balancing
+from graphs.exp1a_internode_homogeneous import graph_load_balancing
 
 
 def graph6_heterogeneous_fog(

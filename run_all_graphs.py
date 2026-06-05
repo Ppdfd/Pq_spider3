@@ -5,15 +5,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from utils.eval_utils import set_global_seed, ensure_dirs, configure_matplotlib, GLOBAL_SEED
 
-from graphs.graph1 import graph1_setup_phase
-from graphs.graph2 import graph2_cache_reuse
-from graphs.graph3 import graph3_cpabe_encryption
-from graphs.graph4 import graph4_cpabe_decryption
-from graphs.graph5 import graph_load_balancing
-from graphs.graph6 import graph6_heterogeneous_fog
-from graphs.graph7 import graph7_intra_enclave, run_graph7_experiment
-from graphs.graph8 import graph8_recovery_latency
-from graphs.graph9 import graph9_task_completion
+from graphs.exp5_cache_reuse import graph2_cache_reuse
+from graphs.exp1a_internode_homogeneous import graph_load_balancing
+from graphs.exp1b_internode_heterogeneous import graph6_heterogeneous_fog
+from graphs.exp2_intranode_enclave import graph7_intra_enclave, run_graph7_experiment
+from graphs.exp3_recovery_latency import graph8_recovery_latency
+from graphs.exp4_completion_ratio import graph9_task_completion
 
 def run_all_graphs():
     rng = set_global_seed(GLOBAL_SEED)
@@ -24,37 +21,25 @@ def run_all_graphs():
     print("Spider Modular Evaluation Simulation")
     print("=" * 72)
 
-    #graph1_setup_phase(rng)
-    print("  * Graph 1 generated (phase1)")
+    #graph_load_balancing(rng, graph_no=5, heterogeneous=False)
+    print("  * Experiment 1a (Homogeneous Internode Scheduling) generated")
+    
+    #graph6_heterogeneous_fog(rng)
+    print("  * Experiment 1b (Heterogeneous Internode Scheduling) generated")
 
+    print("  * Experiment 2 (Intra-Node Enclave Scheduling) generated")
+    #graph7_intra_enclave(rng)
+    #results, enclaves = run_graph7_experiment(rng)
+    print("  * Experiment 2 Diagnostic details complete")
+
+    #graph8_recovery_latency(rng)
+    print("  * Experiment 3 (Fault-Tolerant Recovery Latency) generated")
+
+    #graph9_task_completion(rng)
+    print("  * Experiment 4 (Task Completion under Failures) generated")
+    
     graph2_cache_reuse(rng)
-    print("  * Graph 2 generated (phase3)")
-
-    #graph3_cpabe_encryption(rng)
-    print("  * Graph 3 generated (phase5)")
-
-    #graph4_cpabe_decryption(rng)
-    print("  * Graph 4 generated (phase6)")
-
-    graph_load_balancing(rng, graph_no=5, heterogeneous=False)
-    print("  * Graph 5 generated (phase4)")
-
-    graph6_heterogeneous_fog(rng)
-    print("  * Graph 6 generated (phase4)")
-
-    # Graph 7: task-count sweep (runs its own simulations)
-    graph7_intra_enclave(rng)
-    print("  * Graph 7 generated (phase4)")
-
-    # ── Single experiment for all diagnostic views (7, 11, 12, 13, 14) ──
-    results, enclaves = run_graph7_experiment(rng)
-    print("  * Graph 7 experiment complete (1 run x 3 algorithms)")
-
-    graph8_recovery_latency(rng)
-    print("  * Graph 8 generated (fault-tolerance)")
-
-    graph9_task_completion(rng)
-    print("  * Graph 9 generated (fault-tolerance)")
+    print("  * Experiment 5/6 (Cache- and Reuse-Aware Scheduling) generated")
 
     print("=" * 72)
 

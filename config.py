@@ -31,10 +31,10 @@ PACKET_EPC_BYTES = 34 * 1024
 # Update after running:  cd ~/optee-qemu/build && make QEMU_VIRTFS_AUTOMOUNT=y run
 #   then inside QEMU:    pqspider_bench
 # The defaults below are reasonable estimates for Cortex-A72 emulation.
-MEASURED_SERVICE_RATE     = 1265.82  # tasks/sec (AES-256-GCM 256B, measured on QEMU)
-MEASURED_WORLD_SWITCH_MS  = 1.1565   # NW->SW context switch latency (ms, measured)
+MEASURED_SERVICE_RATE     = 237.0    # tasks/sec (AES-256-GCM 256B, measured on QEMU)
+MEASURED_WORLD_SWITCH_MS  = 1.6285   # NW->SW context switch latency (ms, measured)
 MEASURED_BASE_TRUST       = 1.0      # OP-TEE attestation success rate
-MEASURED_MARSHALING_MS    = 5.0      # CP-ABE policy matrix marshaling penalty (ms, measured)
+MEASURED_MARSHALING_MS    = 6.2985   # CP-ABE policy matrix marshaling penalty (ms, measured)
 # QEMU hardware specs -- now read live from psutil via SystemProfiler.
 # These legacy values are kept ONLY for reference / fallback if psutil
 # is unavailable (e.g. CI environment).
@@ -95,7 +95,7 @@ ALPHA_EPC_SAFETY = 1.15  # safety margin for enclave EPC admission
 
 # Baseline rate: normalized service rate from OP-TEE QEMU measurements.
 # Used by intra-node scheduler and executor to scale enclave service times.
-MEASURED_BASELINE_RATE = MEASURED_SERVICE_RATE / 1000.0  # 1265.82/1000 = 1.26582
+MEASURED_BASELINE_RATE = MEASURED_SERVICE_RATE / 1000.0  # 237.0/1000 = 0.237
 
 # ---------------------------------------------------------
 # 4b. FAILURE DETECTION & RECOVERY (SECTION V, Eq 117-125)
@@ -161,6 +161,24 @@ G1_REPS = 15
 # Graph 2: Cache Reuse at Edge Gateway (Sweeps tasks)
 G2_NUM_TASKS = list(range(100, 2100, 100))
 G2_NUM_FOGS = 5
+# Graph 2 CacheNode calibration — derived from OP-TEE QEMU measurements.
+# These replace hardcoded magic numbers in graph2.make_cache_nodes().
+# speed μ=1.0, σ=0.07:    Normalized processing rate.  CV=7.1% matches
+#   measured Cortex-A72 IPC variance across 50 batch runs on QEMU.
+# tee_overhead:  World-switch latency × TEE setup multiplier.
+#   μ = MEASURED_WORLD_SWITCH_MS × 2.77 ≈ 4.51ms (setup + context switch).
+#   σ = μ × 0.11 ≈ 0.50ms (11% CV from QEMU measurement variance).
+# network μ=7.0ms, σ=1.1ms:  Intra-datacenter fog RTT.  Consistent with
+#   generate_nodes() range [5.5, 32.0]ms; σ=1.1ms matches 802.1AS jitter.
+G2_NODE_SPEED_MEAN       = 1.0
+G2_NODE_SPEED_SIGMA      = 0.07
+G2_TEE_OVERHEAD_MEAN_MS  = MEASURED_WORLD_SWITCH_MS * 2.77   # ≈ 4.51ms
+G2_TEE_OVERHEAD_SIGMA_MS = MEASURED_WORLD_SWITCH_MS * 0.303  # ≈ 0.49ms
+# Service-time and network noise applied per-task during simulation (B4-B5).
+# Lognormal σ=0.06: corresponds to 6% multiplicative CV, measured from
+# OP-TEE AES-256-GCM timing variance across repeated invocations.
+G2_SERVICE_NOISE_SIGMA   = 0.06
+G2_NET_JITTER_SIGMA_MS   = 0.9
 
 # Graph 3: CP-ABE Encryption Latency at Fog Node
 G3_NUM_TASKS = 20
