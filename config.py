@@ -233,3 +233,44 @@ HEARTBEAT_JITTER_SIGMA = 2.0         # Std dev of heartbeat transmission delay (
 HEARTBEAT_CONGESTION_PROB = 0.05     # Congestion spike probability (B3)
 HEARTBEAT_CONGESTION_MIN_MS = 30.0   # Min congestion delay
 HEARTBEAT_CONGESTION_MAX_MS = 60.0   # Max congestion delay
+
+# ---------------------------------------------------------
+# 9. REFERENCE ALGORITHM PARAMETERS (derived from papers)
+# ---------------------------------------------------------
+# These parameters replace previously hardcoded magic numbers in
+# inter_node.py.  Each value is either taken directly from the
+# reference paper's evaluation or derived from its formulation.
+
+# Ref[22] — OLB (Ala'anzy et al., IEEE Access 2024)
+# Paper Eq 10-11: min_j(L^total_j + d_i) where L^total_j = Σ(dl_i + dc_i)
+# The OLB score is the sum of communication latency (Eq 6: TL/(1-TL))
+# and computing latency (Eq 9: CL/(1-CL)).  No explicit weights are
+# given in the paper — the two components are summed directly.  We
+# expose a traffic-vs-compute balance weight for sensitivity analysis.
+REF22_TRAFFIC_WEIGHT  = 1.0   # weight on communication latency component
+REF22_COMPUTE_WEIGHT  = 1.0   # weight on computing latency component
+
+# Ref[37] — SDN-GH (Jasim & Al-Raweshidy, IEEE Sys. J. 2024)
+# Paper Eq 8: binary offloading decision T^x2_x1 = 1 if t_offloading < t_local
+# The paper defines 7 scenarios based on hierarchical capacity checks
+# (local MC → neighboring MCs → local H → neighboring Hs → cloud).
+# We model this as: check local first, then offload to neighbors sorted
+# by capacity if t_offload < t_local.  The coordination overhead
+# captures SDN controller delay for the global view.
+REF37_COORDINATION_MS = 1.5   # SDN controller lookup/coordination delay (ms)
+
+# Ref[39] — DIST (Oustad, IEEE TSC 2025)
+# Paper Eq 16-17: R = Σ_i [ hasmissed_i × (-10 + w_i/100) ]
+# where hasmissed_i = 1 if f_i < d_i (on time), -1 otherwise.
+# The penalty for missing a deadline (-10 + w_i/100 with hasmissed=-1)
+# is ~10× the reward for completing on time (+w_i/100 with hasmissed=1).
+# Paper Section IV.C: α=0.1 (learning rate), γ=0.95 (discount factor).
+# Since we cannot run a full Q-learning loop in the comparative sim,
+# we approximate the converged DIST policy as a static cost function
+# derived from the reward signal:
+#   score = α_lat * latency_est + α_eng * energy_cost - α_rel * reliability
+# where the weights reflect the paper's 10:1 deadline-penalty ratio
+# and the energy model from Paper Eq 10-15.
+REF39_ALPHA_LATENCY     = 1.0    # latency: dominant cost per DIST reward structure
+REF39_ALPHA_ENERGY      = 0.08   # energy: from paper's DVFS-aware energy model (Eq 10-15)
+REF39_ALPHA_RELIABILITY = 0.10   # reliability: trust/success-rate bonus
