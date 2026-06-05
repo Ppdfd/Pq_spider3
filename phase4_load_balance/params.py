@@ -77,4 +77,14 @@ SIMULATION_PARAMS = {
     # Return world-switch SW→NW: 1.13ms [A] + result serialization
     # + network ACK. Sum: ~3.6ms.
     "finalization_ms": 3.6,
+
+    # ── Contention Degradation ──
+    # Each concurrent task sharing the same fog node incurs cache-line
+    # evictions (L1/L2), TLB shootdowns, and memory bandwidth contention.
+    # Amacher & Schiavoni [D] measured 3-8% per-TA throughput loss on
+    # Cortex-A platforms under concurrent enclave execution.
+    # Orenbach et al. [F] measured 15-40% under heavy EPC paging.
+    # We use 8% (upper end of [D]) to model realistic IIoT workloads
+    # where crypto-heavy TAs compete for shared L2 cache and TLB.
+    "contention_degradation_per_task": 0.08,
 }

@@ -50,6 +50,16 @@ class FogNode:
     assigned_count: int = 0
     policy_cached: bool = False
     kyber_cached: bool = False
+    # --- Fields for faithful reference algorithm implementation ---
+    # Ref[22] OLB: traffic load density (Eq 4-5) and computing load density (Eq 7-8)
+    traffic_load: float = 0.0       # TL_j: cumulative traffic load ratio
+    computing_load: float = 0.0     # CL_j: cumulative computing load ratio
+    # Ref[39] DIST: tracks cumulative energy cost for the reward function
+    cumulative_energy: float = 0.0  # total energy consumed by this node
+    tasks_completed: int = 0        # tasks successfully finished (for reliability)
+    # Active task tracking: exact finish times for EPC memory drain calculation.
+    # Tasks are drained when their finish time < current arrival time.
+    _finish_times: List[float] = field(default_factory=list)
 
     @property
     def capability(self) -> float:
@@ -90,6 +100,11 @@ def clone_nodes(nodes: List[FogNode]) -> List[FogNode]:
             assigned_count=n.assigned_count,
             policy_cached=n.policy_cached,
             kyber_cached=n.kyber_cached,
+            traffic_load=n.traffic_load,
+            computing_load=n.computing_load,
+            cumulative_energy=n.cumulative_energy,
+            tasks_completed=n.tasks_completed,
+            _finish_times=list(n._finish_times),  # deep-copy active tasks
         )
         for n in nodes
     ]

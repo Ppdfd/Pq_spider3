@@ -43,8 +43,13 @@ def graph_load_balancing(
         std_series[alg] = std
 
     # AUDIT FIX: Post-hoc override removed.  All algorithms are now
-    # evaluated on identical task streams and node populations with
-    # identical noise levels.  The simulation results stand on their own.
+    # evaluated on identical task streams, node populations, and noise
+    # sequences.  Reference algorithms faithfully implement their paper
+    # formulations:
+    #   Ref[22] — OLB (Eq 4-11): traffic + computing load density model
+    #   Ref[37] — SDN-GH (Eq 8): binary offloading with hierarchical capacity
+    #   Ref[39] — DIST (Eq 16-17): reward-based with energy and reliability
+    # All weights are configurable via config.py (Section 9).
 
     if heterogeneous:
         title = "Graph 6: Heterogeneous Fog Nodes"
