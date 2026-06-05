@@ -199,6 +199,21 @@ static TEE_Result do_benchmark(uint32_t param_types, TEE_Param params[4])
 	return TEE_SUCCESS;
 }
 
+/* ── CMD_MEASURE_MARSHALING: Marshaling overhead ── */
+
+static TEE_Result measure_marshaling(uint32_t param_types, TEE_Param params[4])
+{
+	uint32_t exp = TEE_PARAM_TYPES(TEE_PARAM_TYPE_MEMREF_INPUT,
+				       TEE_PARAM_TYPE_NONE,
+				       TEE_PARAM_TYPE_NONE,
+				       TEE_PARAM_TYPE_NONE);
+	if (param_types != exp)
+		return TEE_ERROR_BAD_PARAMETERS;
+
+	/* The buffer has successfully crossed the boundary! */
+	return TEE_SUCCESS;
+}
+
 /* ── Command dispatcher ── */
 
 TEE_Result TA_InvokeCommandEntryPoint(void __unused *sess_ctx,
@@ -211,6 +226,8 @@ TEE_Result TA_InvokeCommandEntryPoint(void __unused *sess_ctx,
 		return do_benchmark(param_types, params);
 	case CMD_NOP:
 		return TEE_SUCCESS;
+	case CMD_MEASURE_MARSHALING:
+		return measure_marshaling(param_types, params);
 	case CMD_GET_ENCLAVE_STATE: {
 		uint32_t exp = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_OUTPUT,
 					       TEE_PARAM_TYPE_VALUE_OUTPUT,

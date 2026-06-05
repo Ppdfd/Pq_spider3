@@ -28,5 +28,6 @@
 #define CMD_BENCHMARK		0
 #define CMD_NOP			1
 #define CMD_GET_ENCLAVE_STATE	2
+#define CMD_MEASURE_MARSHALING	3
 
 #endif /* TA_PQSPIDER_BENCH_H */
