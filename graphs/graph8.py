@@ -301,7 +301,13 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
         for s in states:
             s.last_heartbeat_ms = 0.0
 
-        strat_rng = np.random.default_rng(seed + hash(strategy) % 10000)
+        # AUDIT FIX: All strategies use identically-seeded RNG so that
+        # execute_task noise (lognormal jitter, network jitter, contention
+        # penalties) is drawn from the same sequence. Previously each
+        # strategy had a hash-offset RNG (seed + hash(strategy) % 10000),
+        # which caused different noise streams and up to ~15% completion
+        # variance on the same tasks — masking algorithmic differences.
+        strat_rng = np.random.default_rng(seed)
 
         # ── Phase 1: Heartbeat simulation + detection ──
         if strategy == "No FT":

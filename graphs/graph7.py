@@ -46,9 +46,9 @@ def simulate_intra_node_detailed(
     """
     import config
 
-    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
+    # AUDIT FIX: All algorithms use identically-seeded RNG (no per-algorithm offset).
     base_rng = np.random.default_rng(seed)
-    rng = np.random.default_rng(seed + alg_offset)
+    rng = np.random.default_rng(seed)
 
     tasks = generate_tasks(
         n_tasks, base_rng,

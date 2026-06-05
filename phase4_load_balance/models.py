@@ -57,6 +57,9 @@ class FogNode:
     # Ref[39] DIST: tracks cumulative energy cost for the reward function
     cumulative_energy: float = 0.0  # total energy consumed by this node
     tasks_completed: int = 0        # tasks successfully finished (for reliability)
+    # Active task tracking: exact finish times for EPC memory drain calculation.
+    # Tasks are drained when their finish time < current arrival time.
+    _finish_times: List[float] = field(default_factory=list)
 
     @property
     def capability(self) -> float:
@@ -101,6 +104,7 @@ def clone_nodes(nodes: List[FogNode]) -> List[FogNode]:
             computing_load=n.computing_load,
             cumulative_energy=n.cumulative_energy,
             tasks_completed=n.tasks_completed,
+            _finish_times=list(n._finish_times),  # deep-copy active tasks
         )
         for n in nodes
     ]

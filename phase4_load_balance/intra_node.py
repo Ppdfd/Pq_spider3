@@ -258,9 +258,12 @@ def simulate_intra_node(
     All algorithms get same task stream + same initial enclave state.
     """
 
-    alg_offset = {"Round-Robin": 7, "Least-Queue": 19, "Spider (Ours)": 41}[algorithm]
+    # AUDIT FIX: All algorithms use identically-seeded RNG so that
+    # execute_on_enclave noise is drawn from the same sequence.
+    # Previously per-algorithm offsets (7/19/41) caused different noise
+    # streams, biasing latency comparisons.
     base_rng = np.random.default_rng(seed)
-    rng = np.random.default_rng(seed + alg_offset)
+    rng = np.random.default_rng(seed)
 
     tasks = generate_tasks(
         n_tasks, base_rng,

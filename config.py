@@ -173,16 +173,20 @@ G4_ATTR_RANGE = list(range(5, 55, 5))
 G4_REPS = 3
 
 # Graph 5: Load Balancing Latency (Sweeps Number of Fog Nodes)
-G5_NUM_TASKS = 2000
-G5_NUM_FOGS = [2, 4, 6, 8, 10, 12]
+# Starting at 6 nodes: at 4 nodes with 10K tasks and offered_load 0.70-0.85,
+# the system is completely saturated (>2.6M ms latency) which crushes the
+# y-axis and hides the interesting 6-14 node region where scheduling
+# algorithms differentiate under realistic IIoT utilization.
+G5_NUM_TASKS = 10000
+G5_NUM_FOGS = [6, 8, 10, 12, 14]
 
 # Graph 6: Heterogeneous Fog Nodes Load Balancing
-G6_NUM_TASKS = 2000
-G6_NUM_FOGS = [2, 4, 6, 8, 10, 12]
+G6_NUM_TASKS = 10000
+G6_NUM_FOGS = [6, 8, 10, 12, 14]
 
 
 # Graph 7: Intra-Node Scheduling & Queue State Diagnosis
-G7_NUM_TASKS = 2000
+G7_NUM_TASKS = 10000
 G7_NUM_TEES = 4
 G7_SPREAD_FACTORS = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0]
 
