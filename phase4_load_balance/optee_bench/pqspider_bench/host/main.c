@@ -25,7 +25,8 @@
 
 #define LATENCY_ROUNDS   50
 #define TRUST_ROUNDS     20
-#define JSON_PATH        "/mnt/host/pq_spider/Pq_spider_new/phase4_load_balance/optee_bench/measured_values.json"
+#define JSON_PATH        "/mnt/host/measured_values.json"
+#define POLICY_MATRIX_SIZE_BYTES (20 * 1024)
 
 int main(int argc, char *argv[])
 {
@@ -105,6 +106,44 @@ int main(int argc, char *argv[])
 	printf("NW_SW_LATENCY_MS=%.4f  (avg of %d rounds)\n",
 	       avg_latency, LATENCY_ROUNDS);
 
+	/* ═══════════════════════════════════════════════════════
+	 * 2.5 MEASURE_MARSHALING: CP-ABE Matrix 20KB Transfer
+	 * ═══════════════════════════════════════════════════════ */
+	TEEC_SharedMemory shm;
+	memset(&shm, 0, sizeof(shm));
+	shm.size = POLICY_MATRIX_SIZE_BYTES;
+	shm.flags = TEEC_MEM_INPUT;
+	res = TEEC_AllocateSharedMemory(&ctx, &shm);
+	double marshaling_ms = 0.0;
+
+	if (res == TEEC_SUCCESS) {
+		memset(shm.buffer, 0x42, POLICY_MATRIX_SIZE_BYTES);
+
+		memset(&op, 0, sizeof(op));
+		op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_WHOLE,
+						 TEEC_NONE, TEEC_NONE, TEEC_NONE);
+		op.params[0].memref.parent = &shm;
+		op.params[0].memref.offset = 0;
+		op.params[0].memref.size = POLICY_MATRIX_SIZE_BYTES;
+
+		struct timespec t_start, t_end;
+		clock_gettime(CLOCK_MONOTONIC, &t_start);
+		res = TEEC_InvokeCommand(&sess, CMD_MEASURE_MARSHALING, &op, &err_origin);
+		clock_gettime(CLOCK_MONOTONIC, &t_end);
+
+		if (res == TEEC_SUCCESS) {
+			marshaling_ms = (t_end.tv_sec - t_start.tv_sec) * 1000.0 +
+					(t_end.tv_nsec - t_start.tv_nsec) / 1000000.0;
+			printf("MARSHALING_MS=%.4f  (20KB Payload)\n", marshaling_ms);
+		} else {
+			printf("MARSHALING FAILED: 0x%x origin 0x%x\n", res, err_origin);
+		}
+
+		TEEC_ReleaseSharedMemory(&shm);
+	} else {
+		printf("TEEC_AllocateSharedMemory failed: 0x%x\n", res);
+	}
+
 	TEEC_CloseSession(&sess);
 
 	/* ═══════════════════════════════════════════════════════
@@ -139,13 +178,14 @@ int main(int argc, char *argv[])
 			"  \"epc_free\": %u,\n"
 			"  \"contention\": %u,\n"
 			"  \"world_switch_ms\": %.4f,\n"
+			"  \"marshaling_ms\": %.4f,\n"
 			"  \"trust_score\": %.4f,\n"
 			"  \"iterations\": %u,\n"
 			"  \"elapsed_ms\": %u,\n"
 			"  \"source\": \"pqspider_bench TA on OP-TEE QEMU v8\"\n"
 			"}\n",
 			service_rate, queue_length, epc_free, contention,
-			avg_latency, trust_score, iters_done, elapsed_ms);
+			avg_latency, marshaling_ms, trust_score, iters_done, elapsed_ms);
 		fclose(fp);
 		printf("\nResults written to %s\n", JSON_PATH);
 	} else {

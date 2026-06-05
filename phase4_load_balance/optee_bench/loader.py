@@ -47,6 +47,7 @@ def load_measurements(config_module=None):
             "service_rate":   config_module.MEASURED_SERVICE_RATE,
             "world_switch_ms": config_module.MEASURED_WORLD_SWITCH_MS,
             "trust_score":    config_module.MEASURED_BASE_TRUST,
+            "marshaling_ms":  getattr(config_module, 'MEASURED_MARSHALING_MS', 5.0),
             "source":         "config.py defaults",
         }
 
@@ -60,12 +61,15 @@ def load_measurements(config_module=None):
         config_module.MEASURED_WORLD_SWITCH_MS = data["world_switch_ms"]
     if "trust_score" in data:
         config_module.MEASURED_BASE_TRUST = data["trust_score"]
+    if "marshaling_ms" in data:
+        config_module.MEASURED_MARSHALING_MS = data["marshaling_ms"]
 
     global _PRINTED
     if not _PRINTED:
         source = data.get("source", "measured_values.json")
         print(f"  [optee_bench] Loaded: rate={data.get('service_rate')}, "
               f"latency={data.get('world_switch_ms')}ms, "
+              f"marshaling={data.get('marshaling_ms')}ms, "
               f"trust={data.get('trust_score')}")
         print(f"  [optee_bench] Source: {source}")
         _PRINTED = True

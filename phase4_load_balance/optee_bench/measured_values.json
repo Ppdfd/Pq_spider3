@@ -1,10 +1,12 @@
 {
-  "service_rate": 393.0,
-  "world_switch_ms": 1.1272,
-  "trust_score": 1.0,
-  "iterations": 100,
+  "service_rate": 237,
   "queue_length": 1,
   "epc_free": 2097152,
   "contention": 0,
-  "source": "pqspider_bench TA heavily loaded (measured manually)"
+  "world_switch_ms": 1.6285,
+  "marshaling_ms": 6.2985,
+  "trust_score": 1.0000,
+  "iterations": 100,
+  "elapsed_ms": 421,
+  "source": "pqspider_bench TA on OP-TEE QEMU v8"
 }

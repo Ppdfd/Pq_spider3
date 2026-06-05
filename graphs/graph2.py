@@ -123,7 +123,9 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
             for ni, n in enumerate(nodes):
                 q_delay = max(0.0, n.available_ms - arrival)
                 # O(1) lookup — no side effects, no cache mutation
-                miss_penalty = 5.0 if policy_id not in node_caches[ni] else 0.0
+                import config
+                penalty_ms = getattr(config, 'MEASURED_MARSHALING_MS', 5.0)
+                miss_penalty = penalty_ms if policy_id not in node_caches[ni] else 0.0
                 scores.append(q_delay + n.network_ms + miss_penalty + rng.normal(0.0, 1.0))
             node_idx = int(np.argmin(scores))
 

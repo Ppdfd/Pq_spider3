@@ -34,6 +34,7 @@ PACKET_EPC_BYTES = 34 * 1024
 MEASURED_SERVICE_RATE     = 1265.82  # tasks/sec (AES-256-GCM 256B, measured on QEMU)
 MEASURED_WORLD_SWITCH_MS  = 1.1565   # NW->SW context switch latency (ms, measured)
 MEASURED_BASE_TRUST       = 1.0      # OP-TEE attestation success rate
+MEASURED_MARSHALING_MS    = 5.0      # CP-ABE policy matrix marshaling penalty (ms, measured)
 # QEMU hardware specs -- now read live from psutil via SystemProfiler.
 # These legacy values are kept ONLY for reference / fallback if psutil
 # is unavailable (e.g. CI environment).
