@@ -21,21 +21,21 @@ def run_all_graphs():
     print("Spider Modular Evaluation Simulation")
     print("=" * 72)
 
-    #graph_load_balancing(rng, graph_no=5, heterogeneous=False)
+    graph_load_balancing(rng, graph_no=5, heterogeneous=False)
     print("  * Experiment 1a (Homogeneous Internode Scheduling) generated")
     
-    #graph6_heterogeneous_fog(rng)
+    graph6_heterogeneous_fog(rng)
     print("  * Experiment 1b (Heterogeneous Internode Scheduling) generated")
 
     print("  * Experiment 2 (Intra-Node Enclave Scheduling) generated")
-    #graph7_intra_enclave(rng)
-    #results, enclaves = run_graph7_experiment(rng)
+    graph7_intra_enclave(rng)
+    results, enclaves = run_graph7_experiment(rng)
     print("  * Experiment 2 Diagnostic details complete")
 
-    #graph8_recovery_latency(rng)
+    graph8_recovery_latency(rng)
     print("  * Experiment 3 (Fault-Tolerant Recovery Latency) generated")
 
-    #graph9_task_completion(rng)
+    graph9_task_completion(rng)
     print("  * Experiment 4 (Task Completion under Failures) generated")
     
     graph2_cache_reuse(rng)
