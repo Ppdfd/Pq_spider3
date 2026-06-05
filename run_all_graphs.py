@@ -27,7 +27,7 @@ def run_all_graphs():
     #graph1_setup_phase(rng)
     print("  * Graph 1 generated (phase1)")
 
-    #graph2_cache_reuse(rng)
+    graph2_cache_reuse(rng)
     print("  * Graph 2 generated (phase3)")
 
     #graph3_cpabe_encryption(rng)
