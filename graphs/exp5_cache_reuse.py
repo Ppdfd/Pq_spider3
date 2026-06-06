@@ -175,7 +175,7 @@ def simulate_cache_latency(task_count: int, mode: str, seed: int) -> Tuple[float
     return float(np.mean(latencies)), float(hits / task_count)
 
 
-def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.ndarray]:
+def graph6_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.ndarray]:
     """Graph 2: reuse-aware cache scheduling latency vs. number of tasks."""
 
     import config
@@ -216,15 +216,14 @@ def graph2_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
         std_series[label] = std
         hit_series[label] = hit_mean
 
-    save_csv(RAW_DIR / "graph2_cache_reuse_latency.csv", "Number of Tasks", tasks, mean_series)
-    save_csv(RAW_DIR / "graph2_cache_hit_rate_auxiliary.csv", "Number of Tasks", tasks, hit_series)
+    save_csv(RAW_DIR / "graph6_cache_reuse_latency.csv", "Number of Tasks", tasks, mean_series)
+    save_csv(RAW_DIR / "graph6_cache_hit_rate_auxiliary.csv", "Number of Tasks", tasks, hit_series)
     plot_lines(
         tasks,
         {k: (mean_series[k], std_series[k]) for k in modes.keys()},
-        "Graph 2: Cache / Reuse-Aware Scheduling",
+        "Graph 6: Cache/Reuse-Aware Scheduling",
         "Number of Tasks",
         "Average Encryption Latency per Task (ms)",
-        "graph2_cache_reuse_scheduling",
+        "graph6_cache_reuse_scheduling",
     )
     return mean_series
-

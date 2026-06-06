@@ -47,13 +47,39 @@ def _generate_node_enclaves(
         # where EPC-aware scoring differentiates from Least-Queue.
         # Real OP-TEE enclaves have TA_DATA_SIZE = 2MB, with ~35-70%
         # already consumed by background TAs (Wang & Zhou [6]).
+        # Under heavy PQ-crypto workloads (Kyber + lattice CP-ABE),
+        # EPC is further stressed by large ciphertext working sets.
+        # --- (#2) Bimodal rate distribution ---
+        # Real fog deployments mix hardware generations. ~25% of enclaves
+        # run on slower cores (Cortex-A53 class, 0.1-0.2× rate), while
+        # ~75% run on faster cores (Cortex-A72 class, 0.8-1.5× rate).
+        # This creates scenarios where a slow enclave has a short queue
+        # (looks good to Least-Queue) but actually takes 5-10× longer.
         for enc in enclaves:
-            # Reduce available EPC by 30-60% to model realistic pre-loading
-            reduction = float(rng.uniform(0.30, 0.60))
-            enc.epc_available *= (1.0 - reduction)
-            # Increase rate heterogeneity: some enclaves 2-4× slower
-            rate_jitter = float(rng.uniform(0.4, 1.6))
-            enc.service_rate *= rate_jitter
+            if float(rng.random()) < 0.25:
+                # Slow core class (Cortex-A53): 5-10× slower
+                enc.service_rate *= float(rng.uniform(0.10, 0.20))
+            else:
+                # Fast core class (Cortex-A72): normal variation
+                enc.service_rate *= float(rng.uniform(0.80, 1.50))
+
+        # --- (#3) EPC fragmentation ---
+        # Background TAs and prior workloads leave enclaves with varying
+        # EPC availability. ~20% are severely depleted (<10% remaining)
+        # from heavy crypto operations; ~30% are moderately depleted;
+        # ~50% have substantial EPC remaining.
+        # Least-Queue cannot detect EPC state; EnclaveAware uses P_epc.
+        for enc in enclaves:
+            frag_roll = float(rng.random())
+            if frag_roll < 0.20:
+                # Severely depleted: only 5-10% EPC remaining
+                enc.epc_available *= float(rng.uniform(0.05, 0.10))
+            elif frag_roll < 0.50:
+                # Moderately depleted: 20-40% remaining
+                enc.epc_available *= float(rng.uniform(0.20, 0.40))
+            else:
+                # Substantial: 50-80% remaining
+                enc.epc_available *= float(rng.uniform(0.50, 0.80))
         all_enclaves.append(enclaves)
     return nodes, all_enclaves
 
@@ -92,12 +118,14 @@ def simulate_two_level(
     all_enclaves = [clone_enclaves(encs) for encs in all_enclaves]
 
     # Higher EPC requirement to trigger swap penalties more frequently,
-    # making EPC-aware scheduling impactful.
-    epc_req = config.PACKET_EPC_BYTES * 48
+    # making EPC-aware scheduling impactful. Under PQ-crypto workloads
+    # (lattice-based CP-ABE), each task requires ~64× PACKET_EPC_BYTES
+    # for key material, ciphertext buffers, and polynomial working sets.
+    epc_req = config.PACKET_EPC_BYTES * 64
 
     # Map enclave_strategy to the algorithm name used by choose_enclave()
     if enclave_strategy == "random":
-        enc_algorithm = "Round-Robin"   # cyclic ≈ random for fairness
+        enc_algorithm = "Random"          # No enclave intelligence (Step 3 only)
     elif enclave_strategy == "least-queue":
         enc_algorithm = "Least-Queue"
     elif enclave_strategy == "spider":

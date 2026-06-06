@@ -135,7 +135,7 @@ def _measure_full_decision(
     return float(np.mean(elapsed_ns)) / 1000.0  # ns → µs
 
 
-def exp7a_decision_latency(rng: np.random.Generator) -> Dict[str, np.ndarray]:
+def graph7_decision_latency(rng: np.random.Generator) -> Dict[str, np.ndarray]:
     """Scenario 1: Decision latency vs number of fog nodes."""
 
     fog_counts = config.EXP7_SC1_FOG_COUNTS
@@ -175,7 +175,7 @@ def exp7a_decision_latency(rng: np.random.Generator) -> Dict[str, np.ndarray]:
 
     # Save raw data
     save_csv(
-        RAW_DIR / "exp7a_decision_latency.csv",
+        RAW_DIR / "graph7_decision_latency.csv",
         "Number of Fog Nodes", x, mean_series,
     )
 
@@ -183,10 +183,10 @@ def exp7a_decision_latency(rng: np.random.Generator) -> Dict[str, np.ndarray]:
     plot_lines(
         x,
         {k: (mean_series[k], std_series[k]) for k in algorithms},
-        "Exp 7 Scenario 1: Load-Balancing Decision Latency",
+        "Graph 7: Load-Balancing Decision Latency",
         "Number of Fog Nodes",
         "Average Decision Latency (µs)",
-        "exp7a_decision_latency",
+        "graph7_decision_latency",
         ylim_bottom=0.0,
     )
 

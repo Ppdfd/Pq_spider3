@@ -16,11 +16,11 @@ FAIRNESS AUDIT NOTE:
 from typing import Dict
 import numpy as np
 
-from graphs.exp1a_internode_homogeneous import graph_load_balancing
+from graphs.exp1a_internode_homogeneous import graph1_load_balancing
 
 
-def graph6_heterogeneous_fog(
+def graph2_heterogeneous_fog(
     rng: np.random.Generator, reps: int = 2
 ) -> Dict[str, np.ndarray]:
-    """Graph 6: Heterogeneous fog-node load-balancing latency."""
-    return graph_load_balancing(rng, graph_no=6, heterogeneous=True, reps=reps)
+    """Graph 2: Heterogeneous fog-node load-balancing latency"""
+    return graph1_load_balancing(rng, graph_no=6, heterogeneous=True, reps=reps)

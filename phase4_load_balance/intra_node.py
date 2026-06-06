@@ -108,7 +108,12 @@ def choose_enclave(
     Spider (Eq 46): full EnclaveScore with completion estimate + EPC + contention
     """
 
-    if algorithm == "Round-Robin":
+    if algorithm == "Random":
+        # No enclave-level intelligence: pick uniformly at random.
+        # Faithfully models Spider-FogOnly (Step 3 only, no Step 4).
+        return enclaves[int(rng.integers(len(enclaves)))]
+
+    elif algorithm == "Round-Robin":
         return enclaves[task_idx % len(enclaves)]
 
     elif algorithm == "Least-Queue":

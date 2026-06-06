@@ -18,7 +18,7 @@ from utils.eval_utils import summarize_runs, save_csv, plot_lines, RAW_DIR
 from graphs.exp3_recovery_latency import STRATEGY_NAMES, _run_scenario
 
 
-def graph9_task_completion(rng: np.random.Generator, reps: int = None):
+def graph5_task_completion(rng: np.random.Generator, reps: int = None):
     """Graph 9: Task Completion Ratio vs Failure Rate.
 
     Includes all 6 strategies (including 'No FT' as lower bound).
@@ -51,14 +51,14 @@ def graph9_task_completion(rng: np.random.Generator, reps: int = None):
 
     x_labels = (failure_rates * 100).astype(int)
 
-    save_csv(RAW_DIR / "graph9_task_completion.csv",
+    save_csv(RAW_DIR / "graph5_task_completion.csv",
              "Failure Rate (%)", x_labels, data)
     plot_lines(
         x_labels, plot_data,
-        "Graph 9: Task Completion Ratio vs Failure Rate",
+        "Graph 5: Task Completion Ratio vs Failure Rate",
         "Failure Rate (%)",
         "Task Completion Ratio (%)",
-        "graph9_task_completion",
+        "graph5_task_completion",
         ylim_bottom=50.0,
         ylim_top=100.0,
     )

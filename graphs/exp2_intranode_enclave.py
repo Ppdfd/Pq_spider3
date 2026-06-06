@@ -116,7 +116,7 @@ def simulate_intra_node_detailed(
     }
 
 
-def graph7_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, np.ndarray]:
+def graph3_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, np.ndarray]:
     """
     Graph 7: Intra-node Multi-Enclave Scheduling -- Heterogeneity Sweep.
     """
@@ -181,15 +181,15 @@ def graph7_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, 
         mean_series[alg] = mean
         std_series[alg] = std
 
-    save_csv(RAW_DIR / "graph7_intra_node_enclaves.csv",
+    save_csv(RAW_DIR / "graph3_intra_node_enclaves.csv",
              "Speed Spread (max/min rate ratio)", spread_factors, mean_series)
     plot_lines(
         spread_factors,
         {k: (mean_series[k], std_series[k]) for k in algorithms},
-        "Graph 7: Intra-node Scheduling under Enclave Heterogeneity",
+        "Graph 3: Intra-node Scheduling under Enclave Heterogeneity",
         "Speed Spread (max/min rate ratio)",
         "Average Task Latency (ms)",
-        "graph7_intra_node_scheduling",
+        "graph3_intra_node_scheduling",
     )
     return mean_series
 

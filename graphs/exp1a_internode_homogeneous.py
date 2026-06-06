@@ -8,13 +8,13 @@ from utils.eval_utils import (
 from phase4_load_balance.inter_node import simulate_load_balancing
 
 
-def graph_load_balancing(
+def graph1_load_balancing(
     rng: np.random.Generator,
     graph_no: int,
     heterogeneous: bool,
     reps: int = 5,
 ) -> Dict[str, np.ndarray]:
-    """Common driver for Graph 5 and Graph 6."""
+    """Common driver for Graph 1 and Graph 2."""
 
     import config
     if heterogeneous:
@@ -52,15 +52,19 @@ def graph_load_balancing(
     # All weights are configurable via config.py (Section 9).
 
     if heterogeneous:
-        title = "Graph 6: Heterogeneous Fog Nodes"
-        filename = "graph6_heterogeneous_fog_nodes"
-        raw_file = "graph6_heterogeneous_fog_nodes.csv"
+        title = "Graph 2: Heterogeneous Fog Node"
+        filename = "graph2_heterogeneous_fog_node"
+        raw_file = "graph2_heterogeneous_fog_node.csv"
     else:
-        title = "Graph 5: Homogeneous Fog Nodes"
-        filename = "graph5_homogeneous_fog_nodes"
-        raw_file = "graph5_homogeneous_fog_nodes.csv"
+        title = "Graph 1: Homogeneous Fog Node"
+        filename = "graph1_homogeneous_fog_node"
+        raw_file = "graph1_homogeneous_fog_node.csv"
 
     save_csv(RAW_DIR / raw_file, "Number of Fog Nodes", node_counts, mean_series)
+    plot_kwargs = {}
+    if not heterogeneous:
+        plot_kwargs["ylim_bottom"] = 60.0
+        plot_kwargs["ylim_top"] = 70.0
     plot_lines(
         node_counts,
         {k: (mean_series[k], std_series[k]) for k in algorithms},
@@ -68,5 +72,6 @@ def graph_load_balancing(
         "Number of Fog Nodes",
         "Average Task Completion Latency (ms)",
         filename,
+        **plot_kwargs,
     )
     return mean_series

@@ -454,7 +454,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
 # Graph 8 entry point
 # ═══════════════════════════════════════════════════════════════════════
 
-def graph8_recovery_latency(rng: np.random.Generator, reps: int = None):
+def graph4_recovery_latency(rng: np.random.Generator, reps: int = None):
     """Graph 8: Recovery Latency vs Number of Fog Nodes.
 
     Excludes 'No FT' (0ms recovery is misleading).
@@ -485,13 +485,13 @@ def graph8_recovery_latency(rng: np.random.Generator, reps: int = None):
         data[name] = mean
         plot_data[name] = (mean, std)
 
-    save_csv(RAW_DIR / "graph8_recovery_latency.csv",
+    save_csv(RAW_DIR / "graph4_recovery_latency.csv",
              "Number of Fog Nodes", fog_counts, data)
     plot_lines(
         fog_counts, plot_data,
-        "Graph 8: Recovery Latency vs Fog Nodes",
+        "Graph 4: Recovery Latency vs Fog Nodes",
         "Number of Fog Nodes",
         "Recovery Latency (ms)",
-        "graph8_recovery_latency",
+        "graph4_recovery_latency",
     )
     return data
