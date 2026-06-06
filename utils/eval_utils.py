@@ -115,6 +115,10 @@ SCHEME_STYLES = {
     "Full Checkpoint":  {"color": "#9B59B6", "marker": "^"},   # Purple triangle
     "Round-Robin":      {"color": "#34A853", "marker": "D"},   # Green diamond
     "Least-Queue":      {"color": "#EA4335", "marker": "v"},   # Red down-triangle
+    # ── Experiment 7 Scenario 2 (Spider ablation variants) ──
+    "Spider-FogOnly":      {"color": "#FF9800", "marker": "s"},   # Orange square
+    "Spider-Heuristic":    {"color": "#9C27B0", "marker": "^"},   # Purple triangle
+    "Spider-EnclaveAware": {"color": "#1A73E8", "marker": "o"},   # Blue circle (full Spider)
 }
 
 

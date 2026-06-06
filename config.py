@@ -218,6 +218,19 @@ G9_NUM_FOGS = 30
 G9_FAILURE_RATES = [0.05, 0.10, 0.15, 0.20, 0.25]
 G9_REPS = 5
 
+# Experiment 7: Load-Balancing Decision Quality and Enclave-Aware Scheduling
+# Scenario 1: Decision Latency vs Number of Fog Nodes
+EXP7_SC1_FOG_COUNTS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+EXP7_SC1_REPS = 10           # Paper: "average of ten independent executions"
+EXP7_SC1_N_TASKS = 500       # Decision latency sample size per config
+
+# Scenario 2: Impact of Enclave-Aware Scheduling
+EXP7_SC2_NUM_FOGS = 20               # Fixed 20 fog nodes
+EXP7_SC2_ENCLAVES_PER_FOG = 4        # 4 enclaves per node
+EXP7_SC2_OFFERED_LOADS = [0.3, 0.5, 0.7, 0.85, 1.0, 1.2]  # Increasing contention
+EXP7_SC2_N_TASKS = 2000              # Per paper: 2000 tasks
+EXP7_SC2_REPS = 5
+
 # Fault-Tolerance Baselines (Section VII-C)
 CHECKPOINT_INTERVAL_MS = 100.0
 # Checkpoint sync overhead: full enclave memory snapshot (~2MB TA_DATA_SIZE)

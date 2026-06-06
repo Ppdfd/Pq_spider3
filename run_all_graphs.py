@@ -11,6 +11,8 @@ from graphs.exp1b_internode_heterogeneous import graph6_heterogeneous_fog
 from graphs.exp2_intranode_enclave import graph7_intra_enclave, run_graph7_experiment
 from graphs.exp3_recovery_latency import graph8_recovery_latency
 from graphs.exp4_completion_ratio import graph9_task_completion
+from graphs.exp7a_decision_latency import exp7a_decision_latency
+from graphs.exp7b_enclave_aware import exp7b_enclave_aware
 
 def run_all_graphs():
     rng = set_global_seed(GLOBAL_SEED)
@@ -41,7 +43,14 @@ def run_all_graphs():
     graph2_cache_reuse(rng)
     print("  * Experiment 5/6 (Cache- and Reuse-Aware Scheduling) generated")
 
+    exp7a_decision_latency(rng)
+    print("  * Experiment 7a (Decision Latency) generated")
+
+    exp7b_enclave_aware(rng)
+    print("  * Experiment 7b (Enclave-Aware Scheduling) generated")
+
     print("=" * 72)
 
 if __name__ == "__main__":
     run_all_graphs()
+
