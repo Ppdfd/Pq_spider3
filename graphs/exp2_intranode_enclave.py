@@ -186,10 +186,12 @@ def graph3_intra_enclave(rng: np.random.Generator, reps: int = 10) -> Dict[str, 
     plot_lines(
         spread_factors,
         {k: (mean_series[k], std_series[k]) for k in algorithms},
-        "Graph 3: Intra-node Scheduling under Enclave Heterogeneity",
+        "",
         "Speed Spread (max/min rate ratio)",
         "Average Task Latency (ms)",
         "graph3_intra_node_scheduling",
+        ylim_bottom=4000000.0,
+        ylim_top=9000000.0
     )
     return mean_series
 

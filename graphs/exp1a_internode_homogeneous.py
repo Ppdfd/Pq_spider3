@@ -52,11 +52,11 @@ def graph1_load_balancing(
     # All weights are configurable via config.py (Section 9).
 
     if heterogeneous:
-        title = "Graph 2: Heterogeneous Fog Node"
+        title = ""
         filename = "graph2_heterogeneous_fog_node"
         raw_file = "graph2_heterogeneous_fog_node.csv"
     else:
-        title = "Graph 1: Homogeneous Fog Node"
+        title = ""
         filename = "graph1_homogeneous_fog_node"
         raw_file = "graph1_homogeneous_fog_node.csv"
 
@@ -64,7 +64,9 @@ def graph1_load_balancing(
     plot_kwargs = {}
     if not heterogeneous:
         plot_kwargs["ylim_bottom"] = 60.0
-        plot_kwargs["ylim_top"] = 70.0
+    else:
+        plot_kwargs["ylim_bottom"] = 30.0
+        plot_kwargs["ylim_top"] = 80.0
     plot_lines(
         node_counts,
         {k: (mean_series[k], std_series[k]) for k in algorithms},

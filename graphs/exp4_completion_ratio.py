@@ -55,7 +55,7 @@ def graph5_task_completion(rng: np.random.Generator, reps: int = None):
              "Failure Rate (%)", x_labels, data)
     plot_lines(
         x_labels, plot_data,
-        "Graph 5: Task Completion Ratio vs Failure Rate",
+        "",
         "Failure Rate (%)",
         "Task Completion Ratio (%)",
         "graph5_task_completion",

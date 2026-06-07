@@ -183,7 +183,7 @@ def graph7_decision_latency(rng: np.random.Generator) -> Dict[str, np.ndarray]:
     plot_lines(
         x,
         {k: (mean_series[k], std_series[k]) for k in algorithms},
-        "Graph 7: Load-Balancing Decision Latency",
+        "",
         "Number of Fog Nodes",
         "Average Decision Latency (µs)",
         "graph7_decision_latency",

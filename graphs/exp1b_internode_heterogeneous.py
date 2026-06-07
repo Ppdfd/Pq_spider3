@@ -20,7 +20,7 @@ from graphs.exp1a_internode_homogeneous import graph1_load_balancing
 
 
 def graph2_heterogeneous_fog(
-    rng: np.random.Generator, reps: int = 2
+    rng: np.random.Generator, reps: int = 20
 ) -> Dict[str, np.ndarray]:
     """Graph 2: Heterogeneous fog-node load-balancing latency"""
     return graph1_load_balancing(rng, graph_no=6, heterogeneous=True, reps=reps)

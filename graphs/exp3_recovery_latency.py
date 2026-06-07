@@ -301,13 +301,17 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
         for s in states:
             s.last_heartbeat_ms = 0.0
 
-        # AUDIT FIX: All strategies use identically-seeded RNG so that
-        # execute_task noise (lognormal jitter, network jitter, contention
-        # penalties) is drawn from the same sequence. Previously each
-        # strategy had a hash-offset RNG (seed + hash(strategy) % 10000),
-        # which caused different noise streams and up to ~15% completion
-        # variance on the same tasks — masking algorithmic differences.
-        strat_rng = np.random.default_rng(seed)
+        # AUDIT FIX: Use TWO independent RNGs per strategy:
+        #   detect_rng — consumed by heartbeat simulation (different amounts
+        #                per strategy due to group-quorum vs centralized)
+        #   exec_rng   — consumed by task execution (execute_task, choose_node)
+        # This ensures all strategies receive IDENTICAL execution noise
+        # sequences regardless of how many RNG draws their detection
+        # mechanism makes. Previously a single shared RNG caused the
+        # execution noise to shift based on detection complexity, creating
+        # up to ~15% completion variance on identical tasks.
+        detect_rng = np.random.default_rng(seed)
+        exec_rng = np.random.default_rng(seed + 1)
 
         # ── Phase 1: Heartbeat simulation + detection ──
         if strategy == "No FT":
@@ -315,7 +319,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
             fp_ids = []
         else:
             detection_time, detected_ids, fp_ids = _run_heartbeat_simulation(
-                states, failed_set, strategy, strat_rng,
+                states, failed_set, strategy, detect_rng,
             )
 
         # After detection: mark failed nodes as non-alive
@@ -362,7 +366,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                         continue
                     # Redirect to healthy node using the strategy's scheduler
                     if strategy == "Spider (Ours)":
-                        node = choose_node([s.fog_node for s in alive_states], task, "Spider (Ours)", strat_rng)
+                        node = choose_node([s.fog_node for s in alive_states], task, "Spider (Ours)", exec_rng)
                     elif strategy == "Least-Queue":
                         best = min(alive_states, key=lambda s: s.fog_node.assigned_count)
                         node = best.fog_node
@@ -379,7 +383,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                             key=lambda n: n.network_ms + max(0.0, max(n.tee_available_ms, n.ree_available_ms) - task.arrival_ms)
                         )
 
-                total_lat = execute_task(node, task, strat_rng)
+                total_lat = execute_task(node, task, exec_rng)
                 if total_lat <= task.deadline_ms:
                     completed += 1
 
@@ -393,7 +397,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                     restart_fraction = max(0.05, 1.0 - progress[idx])
                     control_msgs += 1
                     recovery_state = select_recovery_node(
-                        states, strat_rng, task,
+                        states, exec_rng, task,
                         decision_time=event_time,
                         restart_fraction=restart_fraction,
                     )
@@ -401,8 +405,8 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                         continue
                     node = recovery_state.fog_node
                 elif strategy == "Full Checkpoint":
-                    restart_fraction = max(0.1, 1.0 - config.G8_CHECKPOINT_PROGRESS + strat_rng.uniform(-0.1, 0.1))
-                    node = alive_states[int(strat_rng.integers(0, len(alive_states)))].fog_node
+                    restart_fraction = max(0.1, 1.0 - config.G8_CHECKPOINT_PROGRESS + exec_rng.uniform(-0.1, 0.1))
+                    node = alive_states[int(exec_rng.integers(0, len(alive_states)))].fog_node
                     control_msgs += 3
                 elif strategy == "Centralized HB":
                     restart_fraction = 1.0
@@ -428,7 +432,7 @@ def _run_scenario(n_nodes: int, failure_rate: float, seed: int) -> Dict:
                     node, task,
                     restart_fraction=restart_fraction,
                     detection_delay_ms=event_time,
-                    rng=strat_rng,
+                    rng=exec_rng,
                 )
                 recovery_lats.append(lat)
                 total_lat = lat + (event_time - task.arrival_ms)
@@ -489,7 +493,7 @@ def graph4_recovery_latency(rng: np.random.Generator, reps: int = None):
              "Number of Fog Nodes", fog_counts, data)
     plot_lines(
         fog_counts, plot_data,
-        "Graph 4: Recovery Latency vs Fog Nodes",
+        "",
         "Number of Fog Nodes",
         "Recovery Latency (ms)",
         "graph4_recovery_latency",

@@ -200,7 +200,7 @@ G5_NUM_FOGS = [6, 8, 10, 12, 14]
 
 # Graph 6: Heterogeneous Fog Nodes Load Balancing
 G6_NUM_TASKS = 10000
-G6_NUM_FOGS = [6, 8, 10, 12, 14]
+G6_NUM_FOGS = [6, 7, 8, 9, 10, 11, 12, 13, 14]
 
 
 # Graph 7: Intra-Node Scheduling & Queue State Diagnosis

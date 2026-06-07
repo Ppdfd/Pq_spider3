@@ -221,7 +221,7 @@ def graph6_cache_reuse(rng: np.random.Generator, reps: int = 3) -> Dict[str, np.
     plot_lines(
         tasks,
         {k: (mean_series[k], std_series[k]) for k in modes.keys()},
-        "Graph 6: Cache/Reuse-Aware Scheduling",
+        "",
         "Number of Tasks",
         "Average Encryption Latency per Task (ms)",
         "graph6_cache_reuse_scheduling",

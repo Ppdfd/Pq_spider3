@@ -82,7 +82,7 @@ def graph8_enclave_aware(rng: np.random.Generator) -> Dict[str, np.ndarray]:
     plot_lines(
         x,
         {k: (mean_series[k], std_series[k]) for k in variant_names},
-        "Graph 8: Impact of Enclave-Aware Scheduling",
+        "",
         "Workload Intensity (Offered Load)",
         "Secure Task-Completion Latency (ms)",
         "graph8_enclave_aware",
